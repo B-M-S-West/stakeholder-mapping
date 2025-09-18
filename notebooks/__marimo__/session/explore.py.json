@@ -6,7 +6,7 @@
   "cells": [
     {
       "id": "Hbol",
-      "code_hash": "9e1dd89be3cd6085ddac9d7376ff3cf4",
+      "code_hash": "fd4d34ac70863573cf63c24370feb0c7",
       "outputs": [
         {
           "type": "data",
@@ -19,7 +19,7 @@
     },
     {
       "id": "ZWZq",
-      "code_hash": "523b8a2bf5a8519383d06dfdddb2ad93",
+      "code_hash": "c3b7bb3569b655e9f9a88a854e7c6a40",
       "outputs": [
         {
           "type": "data",
@@ -28,10 +28,61 @@
           }
         }
       ],
-      "console": []
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "Using DB at: /Users/benwest/Documents/Coding/stakeholder-mapping/govmap_db\n"
+        }
+      ]
     },
     {
       "id": "GEVp",
+      "code_hash": "272b1479b8680dd90708d05a5b2cd12d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "oatS",
+      "code_hash": "04993b5e2af8dce82e2419da8113fa35",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": []
+    },
+    {
+      "id": "kwBj",
+      "code_hash": "fc282b57d62f333f4e99af4d43733a2d",
+      "outputs": [
+        {
+          "type": "data",
+          "data": {
+            "text/plain": ""
+          }
+        }
+      ],
+      "console": [
+        {
+          "type": "stream",
+          "name": "stdout",
+          "text": "shape: (14, 5)\n\u250c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u252c\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2510\n\u2502 from_id \u2506 from_name                       \u2506 to_id \u2506 to_name                         \u2506 rel_type  \u2502\n\u2502 ---     \u2506 ---                             \u2506 ---   \u2506 ---                             \u2506 ---       \u2502\n\u2502 i64     \u2506 str                             \u2506 i64   \u2506 str                             \u2506 str       \u2502\n\u255e\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u256a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u256a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u256a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u256a\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2550\u2561\n\u2502 1       \u2506 Cabinet Office                  \u2506 8     \u2506 DSIT                            \u2506 oversight \u2502\n\u2502 1       \u2506 Cabinet Office                  \u2506 7     \u2506 Government Digital Service      \u2506 oversight \u2502\n\u2502 2       \u2506 HM Treasury                     \u2506 5     \u2506 HMRC                            \u2506 oversight \u2502\n\u2502 2       \u2506 HM Treasury                     \u2506 3     \u2506 Department for Business and Tr\u2026 \u2506 oversight \u2502\n\u2502 4       \u2506 Department for Environment Foo\u2026 \u2506 15    \u2506 Local Government Association    \u2506 oversight \u2502\n\u2502 \u2026       \u2506 \u2026                               \u2506 \u2026     \u2506 \u2026                               \u2506 \u2026         \u2502\n\u2502 7       \u2506 Government Digital Service      \u2506 13    \u2506 NHS Digital                     \u2506 supplier  \u2502\n\u2502 7       \u2506 Government Digital Service      \u2506 5     \u2506 HMRC                            \u2506 supplier  \u2502\n\u2502 9       \u2506 GCHQ                            \u2506 10    \u2506 NCSC                            \u2506 mission   \u2502\n\u2502 12      \u2506 Ofcom                           \u2506 15    \u2506 Local Government Association    \u2506 supplier  \u2502\n\u2502 13      \u2506 NHS Digital                     \u2506 15    \u2506 Local Government Association    \u2506 consumer  \u2502\n\u2514\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2534\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2500\u2518\n"
+        }
+      ]
+    },
+    {
+      "id": "crUm",
       "code_hash": null,
       "outputs": [],
       "console": []

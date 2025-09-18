@@ -11,16 +11,53 @@ def _():
     import polars as pl
     import networkx as nx
     import plotly.graph_objects as go
-    return kuzu, mo
+    from pathlib import Path
+    return Path, kuzu, mo, pl
 
 
 @app.cell
-def _(kuzu, mo):
-    DB_PATH = "../govmap_db"
+def _(Path, kuzu, mo):
+    REPO_ROOT = Path(__file__).resolve().parent.parent  # repo root
+    DB_PATH = REPO_ROOT / "govmap_db"
+    print("Using DB at:", DB_PATH)
     db = kuzu.Database(DB_PATH)
     conn = kuzu.Connection(db)
 
     mo.md("## Government Organisation Knowledge Graph Explorer")
+    return (conn,)
+
+
+@app.cell
+def _(mo):
+    # Drop down filter to select what relationships should be shown
+    rel_filter = mo.ui.multiselect(
+        options=["oversight", "supplier", "consumer", "mission"], 
+        value=["oversight", "supplier", "consumer", "mission"], # This is the default selection
+        label="Filter relationships by type"
+    )
+    return (rel_filter,)
+
+
+@app.cell
+def _(conn, pl, rel_filter):
+    # This query will run based upon the filters selected
+    def get_filtered_edges(selected):
+        placeholder = ",".join([f'"{t}"' for t in selected])
+        query = f"""
+        MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+        WHERE r.relationship_type IN [{placeholder}]
+        RETURN a.org_id, a.org_name, b.org_id, b.org_name, r.relationship_type
+        """
+        result = conn.execute(query).get_as_pl()
+        return pl.DataFrame(result, schema=["from_id", "from_name", "to_id", "to_name", "rel_type"])
+
+    edges_df = get_filtered_edges(rel_filter.value)
+    return (edges_df,)
+
+
+@app.cell
+def _(edges_df):
+    print(edges_df)
     return
 
 
