@@ -1,6 +1,9 @@
 # Specific to this project
 data/processed/*
 data/raw/*
+explorer.db
+govmap_db
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

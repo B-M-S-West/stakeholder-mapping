@@ -12,9 +12,7 @@ def _():
     import networkx as nx
     import plotly.graph_objects as go
     from pathlib import Path
-    from dash import Dash, html, dcc, Output, Input
-    import dash_cytoscape as cyto
-    return Path, go, kuzu, mo, nx, pl
+    return Path, kuzu, mo, pl
 
 
 @app.cell
@@ -64,81 +62,26 @@ def _(edges_df):
 
 
 @app.cell
-def _(edges_df, go, nx, pl):
-    def plot_graph(df: pl.DataFrame):
-        if df.is_empty():
-            return go.Figure().update_layout(title="No relationships found")
+def _(conn):
+    # Query all organisations + relationships
+    nodes_query = """
+        MATCH (o:Organisation) RETURN o.org_id, o.org_name
+    """
+    edges_query = """
+        MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+        RETURN a.org_id, b.org_id, r.relationship_type
+    """
 
-        # Convert polars -> networkx edge list
-        G = nx.from_pandas_edgelist(
-            df.to_pandas(), 
-            source="from_id", 
-            target="to_id", 
-            edge_attr="rel_type", 
-            create_using=nx.DiGraph()
-        )
-
-        pos = nx.spring_layout(G, seed=42)
-
-        rel_colors = {
-            "oversight": "blue",
-            "supplier": "green", 
-            "consumer": "orange", 
-            "mission": "red"
-        }
-
-        # Edges
-        edge_x, edge_y, edge_color = [], [], []
-        for u, v, d in G.edges(data=True):
-            x0, y0 = pos[u]
-            x1, y1 = pos[v]
-            edge_x += [x0, x1, None]
-            edge_y += [y0, y1, None]
-            edge_color.append(rel_colors.get(d["rel_type"], "grey"))
-
-        fig = go.Figure()
-
-        # Nodes
-        fig.add_trace(go.Scatter(
-            x=[pos[n][0] for n in G.nodes()],
-            y=[pos[n][0] for n in G.nodes()],
-            text=[G.nodes[n].get("org_name", n) for n in G.nodes()],
-            mode="markers+text",
-            marker=dict(size=12, color="lightgrey"),
-            name="Organisations"
-        ))
-
-        # Edges
-        fig.add_trace(go.Scatter(
-            x=edge_x,
-            y=edge_y,
-            mode="lines",
-            line=dict(width=2, color="grey"),
-            marker=dict(color=edge_color),
-            name="Relationships"
-        ))
-
-        fig.update_layout(
-            title="Knowledge Graph View", 
-            showlegend=False, 
-            margin=dict(l=20, r=20, t=40, b=20)
-        )
-        return fig
-
-    graph_plot = plot_graph(edges_df)
-    return (graph_plot,)
+    nodes = conn.execute(nodes_query).get_as_pl()
+    edges = conn.execute(edges_query).get_as_pl()
+    return edges, nodes
 
 
 @app.cell
-def _(edges_df, graph_plot, mo, rel_filter):
-    mo.vstack([
-        mo.md("### Relationship Filter"), 
-        rel_filter,
-        mo.md("### Graph Visualisation"),
-        graph_plot,
-        mo.md("### Raw Edge Data"),
-        mo.ui.table(edges_df.to_pandas())  # marimo ui.table currently expects pandas
-    ])
+def _(edges, nodes):
+    # Display inside Marimo cell
+    print(nodes)
+    print(edges)
     return
 
 
