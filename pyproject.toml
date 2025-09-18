@@ -5,11 +5,14 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
+    "dash>=3.2.0",
+    "dash-cytoscape>=1.0.2",
     "duckdb>=1.4.0",
     "kuzu>=0.11.2",
     "marimo>=0.15.5",
     "networkx>=3.2.1",
     "numpy>=2.0.2",
+    "pandas>=2.3.2",
     "plotly>=6.3.0",
     "polars>=1.33.1",
     "pyarrow>=21.0.0",
