@@ -90,4 +90,25 @@ def build_graph():
             })
 
         # Commercials
-        commercials 
+        commercials = conn.execute("""
+            MATCH (o:Organisation)-[:ProcuresThrough]->(c:Commercial)
+            RETURN c.commercial_id, o.org_id, c.method, c.budget
+        """).get_as_python()
+        for cid, oid, method, budget in commercials:
+            nodes.append({
+                "data": {
+                    "id": f"com{cid}",
+                    "label": f"{method} (£{budget/1e6:.1f}m)",
+                    "role": "commercial",
+                    "budget": budget
+                }
+            })
+            edges.append({
+                "data": {
+                    "source": f"org{oid}",
+                    "target": f"com{cid}",
+                    "label": "commercial"
+                }
+            })
+
+        return nodes, edges, org_edges
