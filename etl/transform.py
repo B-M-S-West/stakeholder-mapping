@@ -12,7 +12,7 @@ def clean_organisations():
     # Strip spaces, make type lowercase
     df = df.with_columns([
         pl.col("org_name").str.strip_chars().alias("org_name"),
-        pl.col("org_type").str.to_lowercase().alias("org_type")
+        pl.col("org_type").str.strip_chars().str.to_lowercase().alias("org_type")
         ])
     return df
 
@@ -43,8 +43,8 @@ def clean_relationships(orgs):
     df = pl.read_csv(RAW_DATA_PATH / "OrgRelationships.csv")
 
     # Check that from/to IDs exist in organisations
-    invalid_from = df.filter(~pl.col("from_org_id").is_in(orgs["org_id"]))
-    invalid_to = df.filter(~pl.col("to_org_id").is_in(orgs["org_id"]))
+    invalid_from = df.filter(~pl.col("from_org_id").is_in(orgs["org_id"].implode()))
+    invalid_to = df.filter(~pl.col("to_org_id").is_in(orgs["org_id"].implode()))
 
     if invalid_from.height > 0 or invalid_to.height > 0:
         print("⚠️ Warning: Some relationships reference invalid organisation IDs")
