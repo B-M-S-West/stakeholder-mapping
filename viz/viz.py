@@ -143,19 +143,82 @@ app.layout = html.Div([
         style={"width": "100%", "height": "700px"},
         elements=all_nodes + all_edges + all_org_edges,
         stylesheet=[
-            {"selector": "node[role = 'org']", "style": {"background-color": "#2980b9", "label": "data(label)", "color": "black", "font-size": 14}},
-            {"selector": "node[role = 'stakeholder']", "style": {"background-color": "#27ae60", "label": "data(label)" }},
-            {"selector": "node[role = 'painpoint']", "style": {"background-color": "#c0392b", "label": "data(label)" }},
-            {"selector": "node[role = 'commercial']", "style": {"background-color": "#f39c12", "label": "data(label)" }},
+            # Node styles
+            {
+                "selector": "node[role = 'org']", 
+                "style": {
+                    "background-color": "#2980b9", 
+                    "label": "data(label)", 
+                    "color": "black", 
+                    "font-size": 14
+                    }
+                },
+            {
+                "selector": "node[role = 'stakeholder']", 
+                "style": {
+                    "background-color": "#27ae60", 
+                    "label": "data(label)"
+                }
+            },
+            {
+                "selector": "node[role = 'painpoint']", 
+                "style": {
+                    "background-color": "#c0392b", 
+                    "label": "data(label)"
+                }
+            },
+            {
+                "selector": "node[role = 'commercial']", 
+                "style": {
+                    "background-color": "#f39c12", 
+                    "label": "data(label)"
+                }
+            },
             # Org-to-Org relationships by type
-            {"selector": "edge[label = 'mission']", 
-            "style": {"line-color": "#9b59b6", "target-arrow-color": "#9b59b6"}},
-            {"selector": "edge[label = 'supplier']", 
-            "style": {"line-color": "#27ae60", "target-arrow-color": "#27ae60"}},
-            {"selector": "edge[label = 'consumer']", 
-            "style": {"line-color": "#f39c12", "target-arrow-color": "#f39c12"}},
-            {"selector": "edge[label = 'oversight']", 
-            "style": {"line-color": "#e74c3c", "target-arrow-color": "#e74c3c"}},
+            # Default edge style
+            {
+                "selector": "edge", 
+                "style": {
+                    "curve-style": "bezier",
+                    "target-arrow-shape": "triangle",
+                    "arrow-scale": 1,
+                    "width": 2,
+                    "line-color": "#bdc3c7",
+                    "target-arrow-color": "#bdc3c7"
+                }
+            },
+            {
+                "selector": "edge[label = 'mission']", 
+                "style": {
+                    "line-color": "#9b59b6", 
+                    "target-arrow-color": "#9b59b6",
+                    "width": 3
+                }
+            },
+            {
+                "selector": "edge[label = 'supplier']", 
+                "style": {
+                    "line-color": "#27ae60", 
+                    "target-arrow-color": "#27ae60",
+                    "width": 3
+                }
+            },
+            {
+                "selector": "edge[label = 'consumer']", 
+                "style": {
+                    "line-color": "#f39c12", 
+                    "target-arrow-color": "#f39c12",
+                    "width": 3
+                }
+            },
+            {
+                "selector": "edge[label = 'oversight']", 
+                "style": {
+                    "line-color": "#e74c3c", 
+                    "target-arrow-color": "#e74c3c",
+                    "width": 3
+                }
+            },
         ]
     )
 ])
