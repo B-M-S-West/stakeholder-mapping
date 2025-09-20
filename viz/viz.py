@@ -136,6 +136,42 @@ app.layout = html.Div([
         value=["mission", "supplier", "consumer", "oversight"],
         multi=True
     ),
+    # Legend
+html.Div([
+    html.H4("Legend"),
+    html.Div([
+        html.Span(style={"backgroundColor": "#2980b9", "display": "inline-block",
+                         "width": "20px", "height": "20px", "marginRight": "8px"}),
+        "Department"
+    ]),
+    html.Div([
+        html.Span(style={"backgroundColor": "#16a085", "display": "inline-block",
+                         "width": "20px", "height": "20px", "marginRight": "8px"}),
+        "Agency"
+    ]),
+    html.Div([
+        html.Span(style={"backgroundColor": "#d35400", "display": "inline-block",
+                         "width": "20px", "height": "20px", "marginRight": "8px"}),
+        "NDPB"
+    ]),
+    html.Br(),
+    html.Div([
+        html.Span("━━", style={"color": "#9b59b6", "marginRight": "8px"}),
+        "Mission relationship"
+    ]),
+    html.Div([
+        html.Span("━━", style={"color": "#27ae60", "marginRight": "8px"}),
+        "Supplier relationship"
+    ]),
+    html.Div([
+        html.Span("━━", style={"color": "#f39c12", "marginRight": "8px"}),
+        "Consumer relationship"
+    ]),
+    html.Div([
+        html.Span("━━", style={"color": "#e74c3c", "marginRight": "8px"}),
+        "Oversight relationship"
+    ]),
+], style={"marginBottom": "20px", "fontSize": "14px"}),
 
     cyto.Cytoscape(
         id="graph",
@@ -152,6 +188,19 @@ app.layout = html.Div([
                     "color": "black", 
                     "font-size": 14
                     }
+                },
+                # Organization type colors
+                {
+                    "selector": "node[role = 'org'][otype = 'department']",
+                    "style": {"background-color": "#2980b9"}  # blue
+                },
+                {
+                    "selector": "node[role = 'org'][otype = 'agency']",
+                    "style": {"background-color": "#16a085"}  # teal
+                },
+                {
+                    "selector": "node[role = 'org'][otype = 'ndpb']",
+                    "style": {"background-color": "#d35400"}  # orange
                 },
             {
                 "selector": "node[role = 'stakeholder']", 
