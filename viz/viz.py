@@ -4,7 +4,6 @@ import dash_cytoscape as cyto
 from dash.dependencies import Input, Output
 import kuzu
 from pathlib import Path
-import polars as pl
 
 REPO_ROOT = Path(__file__).resolve().parent.parent  # repo root
 DB_PATH = REPO_ROOT / "govmap_db"
