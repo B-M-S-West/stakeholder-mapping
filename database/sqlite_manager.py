@@ -199,7 +199,7 @@ class SQLiteManager:
             ORDER BY c.budget DESC
         """, conn)
         return df
-    
+
     def get_all_org_relationships(self) -> pd.DataFrame:
         """Get all organization relationships with org names"""
         conn = self.get_connection()
@@ -217,3 +217,77 @@ class SQLiteManager:
             ORDER BY o1.org_name
         """, conn)
         return df
+    
+    def get_organisation_by_id(self, org_id: int) -> Optional[Dict]:
+        """Get an organisation by its ID."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM Organisation WHERE org_id = ?", (org_id,))
+        row = cursor.fetchone()
+        return dict(row) if row else None
+    
+    # UPDATE
+    def update_organisation(self, org_id: int, org_name: str, org_type: str, org_function: str) -> bool:
+        """Update an existing organisation."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE Organisation
+                SET org_name = ?, org_type = ?, org_function = ?
+                WHERE org_id = ?
+            """, (org_name, org_type, org_function, org_id))
+            conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.IntegrityError as e:
+            print(f"Error updating organisation: {e}")
+            return False
+        
+    def update_stakeholder(self, stakeholder_id: int, org_id: int, name: str, job_title: str, role: str) -> bool:
+        """Update an existing stakeholder."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE Stakeholder
+                SET org_id = ?, name = ?, job_title = ?, role = ?
+                WHERE stakeholder_id = ?
+            """, (org_id, name, job_title, role, stakeholder_id))
+            conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.IntegrityError as e:
+            print(f"Error updating stakeholder: {e}")
+            return False
+        
+    def update_painpoint(self, painpoint_id: int, org_id: int, description: str, severity: str, urgency: str) -> bool:
+        """Update an existing pain point."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE PainPoint
+                SET org_id = ?, description = ?, severity = ?, urgency = ?
+                WHERE painpoint_id = ?
+            """, (org_id, description, severity, urgency, painpoint_id))
+            conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.IntegrityError as e:
+            print(f"Error updating pain point: {e}")
+            return False
+        
+    def update_commercial(self, commercial_id: int, org_id: int, method: str, budget: float) -> bool:   
+        """Update an existing commercial entry."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                UPDATE Commercial
+                SET org_id = ?, method = ?, budget = ?
+                WHERE commercial_id = ?
+            """, (org_id, method, budget, commercial_id))
+            conn.commit()
+            return cursor.rowcount > 0
+        except sqlite3.IntegrityError as e:
+            print(f"Error updating commercial entry: {e}")
+            return False
+    
