@@ -161,3 +161,59 @@ class SQLiteManager:
             return False
         
     # READ
+    def get_all_organisations(self) -> pd.DataFrame:
+        """Get all organisations as DataFrame."""
+        conn = self.get_connection()
+        df = pd.read_sql_query("SELECT * FROM Organisation ORDER BY org_name", conn)
+        return df
+    
+    def get_all_stakeholders(self) -> pd.DataFrame:
+        """Get all stakeholders with org names"""
+        conn = self.get_connection()
+        df = pd.read_sql_query("""
+            SELECT s.*, o.org_name
+            FROM Stakeholder s
+            LEFT JOIN Organisation o ON s.org_id = o.org_id
+            ORDER BY s.name
+        """, conn)
+        return df
+    
+    def get_all_painpoints(self) -> pd.DataFrame:
+        """Get all pain points with org names"""
+        conn = self.get_connection()
+        df = pd.read_sql_query("""
+            SELECT p.*, o.org_name
+            FROM PainPoint p
+            LEFT JOIN Organisation o ON p.org_id = o.org_id
+            ORDER BY p.severity DESC, p.urgency DESC
+        """, conn)
+        return df
+    
+    def get_all_commercials(self) -> pd.DataFrame:
+        """Get all commercial entries with org names"""
+        conn = self.get_connection()
+        df = pd.read_sql_query("""
+            SELECT c.*, o.org_name
+            FROM Commercial c
+            LEFT JOIN Organisation o ON c.org_id = o.org_id
+            ORDER BY c.budget DESC
+        """, conn)
+        return df
+    
+    def get_all_org_relationships(self) -> pd.DataFrame:
+        """Get all organization relationships with org names"""
+        conn = self.get_connection()
+        df = pd.read_sql_query("""
+            SELECT
+                r.id,
+                r.from_org_id,
+                o1.org_name AS from_org_name,
+                r.to_org_id,
+                o2.org_name AS to_org_name,
+                r.relationship_type
+            FROM OrgRelationships r
+            LEFT JOIN Organisation o1 ON r.from_org_id = o1.org_id
+            LEFT JOIN Organisation o2 ON r.to_org_id = o2.org_id
+            ORDER BY o1.org_name
+        """, conn)
+        return df
