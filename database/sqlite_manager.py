@@ -351,3 +351,18 @@ class SQLiteManager:
         except Exception as e:
             print(f"Error deleting organization relationship: {e}")
             return False
+        
+    # UTILITY
+    def get_next_id(self, table: str, id_column: str) -> int:
+        """Get the next available ID for a given table and ID column."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(f"SELECT MAX({id_column}) AS max_id FROM {table}")
+        result = cursor.fetchone()[0]
+        return (result or 0) + 1
+    
+    def close_connection(self):
+        """Close the database connection."""
+        if self.conn:
+            self.conn.close()
+            self.conn = None
