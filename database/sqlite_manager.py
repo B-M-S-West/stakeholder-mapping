@@ -291,3 +291,63 @@ class SQLiteManager:
             print(f"Error updating commercial entry: {e}")
             return False
     
+    # DELETE
+    def delete_organisation(self, org_id: int) -> bool:
+        """Delete an organisation by its ID."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM Organisation WHERE org_id = ?", (org_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error deleting organisation: {e}")
+            return False
+
+    def delete_stakeholder(self, stakeholder_id: int) -> bool:
+        """Delete a stakeholder by its ID."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM Stakeholder WHERE stakeholder_id = ?", (stakeholder_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error deleting stakeholder: {e}")
+            return False
+
+    def delete_painpoint(self, painpoint_id: int) -> bool:
+        """Delete a pain point by its ID."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM PainPoint WHERE painpoint_id = ?", (painpoint_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error deleting pain point: {e}")
+            return False
+
+    def delete_commercial(self, commercial_id: int) -> bool:
+        """Delete a commercial entry by its ID."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM Commercial WHERE commercial_id = ?", (commercial_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error deleting commercial entry: {e}")
+            return False
+        
+    def delete_org_relationship(self, relationship_id: int) -> bool:
+        """Delete an organization relationship by its ID."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("DELETE FROM OrgRelationships WHERE id = ?", (relationship_id,))
+            conn.commit()
+            return cursor.rowcount > 0
+        except Exception as e:
+            print(f"Error deleting organization relationship: {e}")
+            return False
