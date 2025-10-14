@@ -1,4 +1,5 @@
 from math import e
+import re
 import kuzu
 from pathlib import Path
 from typing import List, Dict, Any
@@ -261,3 +262,86 @@ class KuzuManager:
             'to_org_id': to_org_id,
             'relationship_type': relationship_type
         })
+
+    # ======= Graph Query Operations (called by graph_manager) =======
+
+    def get_graph_data(self, relationship_filters: List[str] = None) -> Dict[str, List]:
+        """Get all graph data for visualization."""
+        if relationship_filters is None:
+            relationship_filters = config.RELATIONSHIP_TYPES
+
+        nodes = []
+        edges = []
+
+        # Get organisations
+        orgs = self.conn.execute("""
+            MATCH (o:Organisation)
+            RETURN o.org_id, o.org_name, o.org_type, o.org_function
+        """).get_as_df()
+
+        for _, row in orgs.iterrows():
+            nodes.append({
+                'id': f"org{row['o.org_id']}",
+                'label': row['o.org_name'],
+                'type': 'Organisation',
+                'org_type': row['o.org_type'],
+                'function': row['o.org_function']
+            })
+
+        # Get org relationships (filtered)
+        rel_filter_str = ", ".join([f"'{r}'" for r in relationship_filters])
+        org_rels = self.conn.execute(f"""
+            MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+            WHERE r.relationship_type IN [{rel_filter_str}]
+            RETURN a.org_id, b.org_id, r.relationship_type
+        """).get_as_df()
+
+        for _, row in org_rels.iterrows():
+            edges.append({
+                'from': f"org{row['a.org_id']}",
+                'to': f"org{row['b.org_id']}",
+                'label': row['r.relationship_type'],
+                'type': 'OrgRelation'
+            })
+
+        # Get stakeholders
+        stakeholders = self.conn.execute("""
+            MATCH (o:Organisation)-[:HasStakeholder]->(s:Stakeholder)
+            RETURN s.stakeholder_id, o.org_id, s.name, s.job_title, s.role
+        """).get_as_df()
+
+        for _, row in stakeholders.iterrows():
+            nodes.append({
+                'id': f"st{row['s.stakeholder_id']}",
+                'label': row['s.name'],
+                'type': 'Stakeholder',
+                'job_title': row['s.job_title'],
+                'role': row['s.role']
+            })
+            edges.append({
+                'from': f"org{row['o.org_id']}",
+                'to': f"st{row['s.stakeholder_id']}",
+                'label': 'HasStakeholder',
+                'type': 'HasStakeholder'
+            })
+
+        # Get pain points
+        painpoints = self.conn.execute("""
+            MATCH (o:Organisation)-[:HasPainPoint]->(p:PainPoint)
+            RETURN p.painpoint_id, o.org_id, p.description, p.severity, p.urgency
+        """).get_as_df()
+
+        for _, row in painpoints.iterrows():
+            nodes.append({
+                'id': f"pp{row['p.painpoint_id']}",
+                'label': row['p.description'][:50] + '...' if len(row['p.description']) > 50 else row['p.description'],
+                'type': 'PainPoint',
+                'severity': row['p.severity'],
+                'urgency': row['p.urgency']
+            })
+            edges.append({
+                'from': f"org{row['o.org_id']}",
+                'to': f"pp{row['p.painpoint_id']}",
+                'label': 'HasPainPoint',
+                'type': 'HasPainPoint'
+            })
