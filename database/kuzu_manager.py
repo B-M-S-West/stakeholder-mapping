@@ -1,3 +1,4 @@
+from math import e
 import kuzu
 from pathlib import Path
 from typing import List, Dict, Any
@@ -44,3 +45,34 @@ class KuzuManager:
                     PRIMARY KEY (commercial_id)
                 )
             """)
+
+            # Relationships
+            self.conn.execute("""
+                CREATE REL TABLE IF NOT EXISTS OrgRelation (
+                    FROM Organisation TO Organisation
+                    relationship_type STRING
+                )
+            """)
+
+            self.conn.execute("""
+                CREATE REL TABLE IF NOT EXISTS HasStakeholder (
+                    FROM Organisation TO Stakeholder
+                )
+            """)
+
+            self.conn.execute("""
+                CREATE REL TABLE IF NOT EXISTS HasPainPoint (
+                    FROM Organisation TO PainPoint
+                )
+            """)
+
+            self.conn.execute("""
+                CREATE REL TABLE IF NOT EXISTS ProcuresThrough (
+                    FROM Organisation TO Commercial
+                )
+            """)
+
+        except Exception as e:
+            # Tables might already exist
+            print(f"Error initializing schema: {e}")
+
