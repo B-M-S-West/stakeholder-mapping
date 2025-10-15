@@ -1,0 +1,142 @@
+from email.policy import default
+import streamlit as st
+import pandas as pd
+from database.sqlite_manager import SQLiteManager
+from database.sync_manager import SyncManager
+import config
+
+def render_crud_interface(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
+    """Render the CRUD interface using Streamlit."""
+
+    st.header("📝 Data Management")
+
+    # Entity selector
+    entity_type = st.selectbox(
+        "Select Entity Type",
+        ["Organisations", "Stakeholders", "Pain Points", "Commercial", "Relationships"]
+    )
+
+    if entity_type == "Organisations":
+        render_organisation_crud(sqlite_mgr, sync_mgr)
+    elif entity_type == "Stakeholders":
+        render_stakeholder_crud(sqlite_mgr, sync_mgr)
+    elif entity_type == "Pain Points":
+        render_pain_point_crud(sqlite_mgr, sync_mgr)
+    elif entity_type == "Commercial":
+        render_commercial_crud(sqlite_mgr, sync_mgr)
+    elif entity_type == "Relationships":
+        render_relationship_crud(sqlite_mgr, sync_mgr)
+
+# ========= Organisation CRUD =========
+
+def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
+    """Render CRUD interface for Organisations."""
+
+    st.subheader("🏢 Organisations")
+    
+    # Action tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 View All", "➕ Add New", "✏️ Edit", "🗑️ Delete"])
+
+    # View all
+    with tab1:
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if orgs_df.empty:
+            st.info("No organisations found. Please add some.")
+        else:
+            st.write(f"**Total Organisations: {len(orgs_df)}**")
+
+            # Filters
+            col1, col2 = st.columns(2)
+            with col1:
+                org_type_filter = st.multiselect(
+                    "Filter by Type",
+                    options=config.ORG_TYPES,
+                    default=config.ORG_TYPES
+                )
+
+            with col2:
+                search_term = st.text_input("Search by name", "")
+
+            # Apply filters
+            filtered_df = orgs_df[orgs_df['org_type'].isin(org_type_filter)]
+            if search_term:
+                filtered_df = filtered_df[
+                    filtered_df['org_name'].str.contains(search_term, case=False, na=False)
+                    ]
+                
+                st.dataFrame(
+                    filtered_df,
+                    use_container_width=True,
+                    hide_index=True
+                )
+
+                # Export filtered data
+                if not filtered_df.empty:
+                    csv = filtered_df.to_csv(index=False)
+                    st.download_button(
+                        label="📥 Export Filtered Data",
+                        data=csv,
+                        file_name='filtered_organisations.csv',
+                        mime='text/csv'
+                    )
+
+    # Add new
+    with tab2:
+        with st.form("add_organisation"):
+            st.write("### Add New Organisation")
+
+            # Auto-generate next ID
+            next_id = sqlite_mgr.get_next_id("organisations", "org_id")
+            org_id = st.number_input(
+                "Organisation ID",
+                min_value=1,
+                value=next_id,
+                step=1,
+                help="Unique identifier for the organisation."
+            )
+
+            org_name = st.text_input(
+                "Organisation Name",
+                placeholder="Enter organisation name",
+                help="Name of the organisation."
+            )
+            org_type = st.selectbox(
+                "Organisation Type",
+                options=config.ORG_TYPES,
+                index=0,
+                help="Type of the organisation."
+            )
+
+            org_function = st.text_area(
+                "Function",
+                placeholder="Describe the organisation's function",
+                help="Brief description of the organisation's function."
+            )
+
+            col1, col2 = st.columns(2)
+            with col1:
+                submit = st.form_submit_button("Add Organisation", type="primary", use_container_width=True)
+            with col2:
+                sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+            
+            if submit:
+                if not org_name:
+                    st.error("Organisation name is required!")
+                else:
+                    success = sqlite_mgr.insert_organisation(
+                        org_id, org_name, org_type, org_function
+                    )
+                    
+                    if success:
+                        st.success(f"✅ Added organisation: {org_name}")
+                        
+                        if sync_to_kuzu:
+                            sync_mgr.sync_organisation(org_id)
+                            st.success("✅ Synced to graph database")
+                        
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to add organisation (ID or name may already exist)")
+                        
+    # Edit existing
