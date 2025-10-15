@@ -6,6 +6,8 @@ from loguru import logger
 import config
 from database.sqlite_manager import SQLiteManager
 from database.sync_manager import SyncManager
+import zipfile
+import io
 
 def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
     """Render CSV import/export interface"""
@@ -164,3 +166,88 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 st.error(f"Error reading CSV: {e}")
 
     # ========== Export CSV Tab ==========
+    with tab2:
+        st.subheader("Export Data to CSV")
+
+        export_type = st.selectbox(
+            "Select data to export",
+            ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship", "All Tables"]
+        )
+
+        if st.button("Generate CSV", type="primary"):
+            try:
+                if export_type == "Organisation":
+                    df = sqlite_mgr.get_all_organisations()
+                    filename = "organisations_export.csv"
+                
+                elif export_type == "Stakeholder":
+                    df = sqlite_mgr.get_all_stakeholders()
+                    df = df.drop(columns=['org_name'], errors='ignore')  
+                    # Drop org_name as join column
+                    filename = "stakeholders_export.csv"
+
+                elif export_type == "PainPoint":
+                    df = sqlite_mgr.get_all_painpoints()
+                    df = df.drop(columns=['org_name'], errors='ignore')  
+                    # Drop org_name as join column
+                    filename = "painpoints_export.csv"
+
+                elif export_type == "Commercial":
+                    df = sqlite_mgr.get_all_commercials()
+                    df = df.drop(columns=['org_name'], errors='ignore')  
+                    # Drop org_name as join column
+                    filename = "commercials_export.csv"
+
+                elif export_type == "OrgRelationship":
+                    df = sqlite_mgr.get_all_org_relationships()
+                    df = df[['from_org_id', 'to_org_id', 'relationship_type']]  
+                    # Only keep relevant columns
+                    filename = "org_relationships_export.csv"
+
+                elif export_type == "All Tables":
+                    # Export all tables as a zip file
+                    zip_buffer = io.BytesIO()
+                    with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
+                        for table in ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship"]:
+                            if table == "Organisation":
+                                df = sqlite_mgr.get_all_organisations()
+                            elif table == "Stakeholder":
+                                df = sqlite_mgr.get_all_stakeholders()
+                                df = df.drop(columns=['org_name'], errors='ignore')
+                            elif table == "PainPoint":
+                                df = sqlite_mgr.get_all_painpoints()
+                                df = df.drop(columns=['org_name'], errors='ignore')
+                            elif table == "Commercial":
+                                df = sqlite_mgr.get_all_commercials()
+                                df = df.drop(columns=['org_name'], errors='ignore')
+                            elif table == "OrgRelationship":
+                                df = sqlite_mgr.get_all_org_relationships()
+                                df = df[['from_org_id', 'to_org_id', 'relationship_type']]
+
+                            csv_data = df.to_csv(index=False)
+                            zip_file.writestr(f"{table.lower()}_export.csv", csv_data)
+
+                    st.download_button(
+                        label="📥 Download All Tables (ZIP)",
+                        data=zip_buffer.getvalue(),
+                        file_name="stakeholder_map_export.zip",
+                        mime="application/zip"
+                    )
+                    st.success("✅ Export package ready!")
+                    return  # Exit after handling all tables
+                
+                # Single table export
+                csv_data = df.to_csv(index=False)
+
+                st.download_button(
+                    label=f"📥 Download {filename}",
+                    data=csv_data,
+                    file_name=filename,
+                    mime="text/csv"
+                )
+
+                st.success(f"✅ Exported {len(df)} records!")
+                st.dataframe(df.head())
+            
+            except Exception as e:
+                st.error(f"❌ Error exporting {filename}: {e}")
