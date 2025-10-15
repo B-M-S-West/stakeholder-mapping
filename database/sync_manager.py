@@ -137,3 +137,23 @@ class SyncManager:
         logger.info("✅ Full sync completed.")
 
     # ========== Delete Sync Operations ==========
+
+    def delete_organisation(self, org_id: int):
+        """Delete an organisation and its related nodes from Kuzu."""
+        self.kuzu.delete_organisation(org_id)
+
+    def delete_stakeholder(self, stakeholder_id: int):
+        """Delete a stakeholder and its related nodes from Kuzu."""
+        self.kuzu.delete_stakeholder(stakeholder_id)
+
+    def delete_painpoint(self, painpoint_id: int):
+        """Delete a painpoint and its related nodes from Kuzu."""
+        self.kuzu.delete_painpoint(painpoint_id)
+
+    def delete_commercial(self, commercial_id: int):
+        """Delete a commercial and its related nodes from Kuzu."""
+        self.kuzu.delete_commercial(commercial_id)
+
+    def delete_relationship(self, from_org_id: int, to_org_id: int, relationship_type: str):
+        """Delete a relationship and its related nodes from Kuzu."""
+        self.kuzu.delete_relationship(from_org_id, to_org_id, relationship_type)
