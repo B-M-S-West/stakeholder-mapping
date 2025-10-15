@@ -335,13 +335,61 @@ class KuzuManager:
             nodes.append({
                 'id': f"pp{row['p.painpoint_id']}",
                 'label': row['p.description'][:50] + '...' if len(row['p.description']) > 50 else row['p.description'],
-                'type': 'PainPoint',
+                'type': 'painpoint',
                 'severity': row['p.severity'],
                 'urgency': row['p.urgency']
             })
             edges.append({
                 'from': f"org{row['o.org_id']}",
                 'to': f"pp{row['p.painpoint_id']}",
-                'label': 'HasPainPoint',
-                'type': 'HasPainPoint'
+                'label': 'painpoint',
+                'type': 'has_painpoint'
             })
+        
+        # Get commercials
+        commercials = self.conn.execute("""
+            MATCH (o:Organisation)-[:ProcuresThrough]->(c:Commercial)
+            RETURN c.commercial_id, o.org_id, c.method, c.budget
+        """).get_as_df()
+
+        for _, row in commercials.iterrows():
+            nodes.append({
+                'id': f"com{row['c.commercial_id']}",
+                'label': f"{row['c.method']} (£{row['c.budget']/1e6:.1f}m)",
+                'type': 'commercial',
+                'method': row['c.method'],
+                'budget': row['c.budget']
+            })
+            edges.append({
+                'from': f"org{row['o.org_id']}",
+                'to': f"com{row['c.commercial_id']}",
+                'label': 'commercial',
+                'type': 'procures_through'
+            })
+
+        return {'nodes': nodes, 'edges': edges}
+    
+    def get_organisation_neighborhood(self, org_id: int, depth: int = 1) -> Dict[str, List]:
+        """Get neighbourhood of an organisation up to a certain depth."""
+        # Get nodes and edges using variable length relationships
+        query = f"""
+            MATCH path = (o:Organisation {{org_id: $org_id}})-[*1..{depth}]-(connected)
+            RETURN path
+        """
+        result = self.conn.execute(query, {'org_id': org_id})
+        # Process and return nodes/edges from paths
+        # Implementation depends on your needs
+        pass
+
+    def find_shortest_path(self, from_org_id: int, to_org_id: int) -> List[Dict]:
+        """Find shortest path between two organisations."""
+        query = """
+            MATCH path = shortestPath((a:Organisation {org_id: $from_org_id})-[*]-(b:Organisation {org_id: $to_org_id}))
+            RETURN path
+        """
+        result = self.conn.execute(query, {
+            'from_org_id': from_org_id,
+            'to_org_id': to_org_id
+        })
+        # Process and return path
+        pass
