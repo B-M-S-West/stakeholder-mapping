@@ -779,3 +779,43 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             st.rerun()
                         else:
                             st.error("❌ Failed to update commercial entry")
+
+    # Delete
+    with tab4:
+        commercial_df = sqlite_mgr.get_all_commercials()
+
+        if commercial_df.empty:
+            st.info("No commercial entries found. Add one using the 'Add New' tab.")
+        else:
+            commercial_options = {f"{row['method']} - {row['org_name']} - £{row['budget']/1e6:.2f}m (ID: {row['commercial_id']})": row['commercial_id'] for _, row in commercial_df.iterrows()}
+
+            selected_commercial = st.selectbox("Select Commercial Entry to Delete", options=list(commercial_options.keys()))
+
+            if selected_commercial:
+                commercial_id = commercial_options[selected_commercial]
+                commercial_data = commercial_df[commercial_df['commercial_id'] == commercial_id].iloc[0]
+
+                st.write(f"**Organisation:** {commercial_data['org_name']}")
+                st.write(f"**Method:** {commercial_data['method']}")
+                st.write(f"**Budget:** £{commercial_data['budget']/1e6:.2f}m")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    confirm = st.checkbox("Confirm deletion (this action cannot be undone)")
+
+                with col2:
+                    sync_to_kuzu = st.checkbox("Delete from graph", value=True)
+
+                if st.button("🗑️ Delete Commercial Entry", type="primary", disabled=not confirm):
+                    success = sqlite_mgr.delete_commercial(commercial_id)
+
+                    if success:
+                        st.success(f"✅ Deleted commercial entry")
+
+                        if sync_to_kuzu:
+                            sync_mgr.delete_commercial_from_graph(commercial_id)
+                            st.success("✅ Deleted from graph database")
+
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to delete commercial entry")
