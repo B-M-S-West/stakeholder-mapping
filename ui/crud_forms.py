@@ -1,4 +1,5 @@
 from email.policy import default
+from os import sync
 import select
 import streamlit as st
 import pandas as pd
@@ -193,3 +194,45 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                 st.error("❌ Failed to update organisation (name may already exist)")
 
     # Delete
+    with tab4:
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if orgs_df.empty:
+            st.info("No organisations found. Please add some.")
+        else:
+            st.warning("⚠️ Deleting an organisation will also remove all associated stakeholders, pain points, commercial entries, and relationships.")
+
+            org_options = {f"{row['org_name']} (ID: {row['org_id']})": row['org_id'] for _, row in orgs_df.iterrows()}
+
+            selected_org = st.selectbox("Select Organisation to Delete", options=list(org_options.keys()))
+
+            if selected_org:
+                org_id = org_options[selected_org]
+                org_data = sqlite_mgr.get_organisation_by_id(org_id)
+
+                st.write(f"**Name:** {org_data['org_name']}")
+                st.write(f"**Type:** {org_data['org_type']}")
+                st.write(f"**Function:** {org_data['org_function']}")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    confirm = st.checkbox("I understand this action cannot be undone")
+
+                with col2:
+                    sync_to_kuzu = st.checkbox("Delete from graph", value=True)
+
+                if st.button("🗑️ Delete Organisation", type="primary", disabled=not confirm):
+                    success = sqlite_mgr.delete_organisation(org_id)
+
+                    if success:
+                        st.success(f"✅ Deleted organisation: {org_data['org_name']}")
+
+                        if sync_to_kuzu:
+                            sync_mgr.delete_organisation_from_graph(org_id)
+                            st.success("✅ Deleted from graph database")
+
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to delete organisation")
+
+# ========= Stakeholder CRUD =========
