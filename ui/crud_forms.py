@@ -590,3 +590,44 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                 st.error("❌ Failed to update pain point")
 
     # Delete
+    with tab4:
+        painpoints_df = sqlite_mgr.get_all_painpoints()
+
+        if painpoints_df.empty:
+            st.info("No pain points found. Add one using the 'Add New' tab.")
+        else:
+            painpoint_options = {f"{row['description'][:50]}... - {row['org_name']} (ID: {row['painpoint_id']})": row['painpoint_id'] for _, row in painpoints_df.iterrows()}
+
+            selected_painpoint = st.selectbox("Select Pain Point to Delete", options=list(painpoint_options.keys()))
+
+            if selected_painpoint:
+                painpoint_id = painpoint_options[selected_painpoint]
+                painpoint_data = painpoints_df[painpoints_df['painpoint_id'] == painpoint_id].iloc[0]
+
+                st.write(f"**Description:** {painpoint_data['description']}")
+                st.write(f"**Organisation:** {painpoint_data['org_name']}")
+                st.write(f"**Severity:** {painpoint_data['severity']}")
+                st.write(f"**Urgency:** {painpoint_data['urgency']}")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    confirm = st.checkbox("Confirm deletion (this action cannot be undone)")
+
+                with col2:
+                    sync_to_kuzu = st.checkbox("Delete from graph", value=True)
+
+                if st.button("🗑️ Delete Pain Point", type="primary", disabled=not confirm):
+                    success = sqlite_mgr.delete_painpoint(painpoint_id)
+
+                    if success:
+                        st.success(f"✅ Deleted pain point")
+
+                        if sync_to_kuzu:
+                            sync_mgr.delete_painpoint_from_graph(painpoint_id)
+                            st.success("✅ Deleted from graph database")
+
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to delete pain point")
+
+# ========= Commercial CRUD =========
