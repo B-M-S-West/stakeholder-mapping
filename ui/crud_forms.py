@@ -427,3 +427,55 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.error("❌ Failed to delete stakeholder")
 
 # ========= Pain Point CRUD =========
+
+def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
+    """Render CRUD interface for Pain Points."""
+
+    st.subheader("⚠️ Pain Points")
+    
+    # Action tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 View All", "➕ Add New", "✏️ Edit", "🗑️ Delete"])
+
+    # View all
+    with tab1:
+        pain_points_df = sqlite_mgr.get_all_painpoints()
+
+        if pain_points_df.empty:
+            st.info("No pain points found. Add one using the 'Add New' tab.")
+        else:
+            st.write(f"**Total Pain Points: {len(pain_points_df)}**")
+
+            # Filters
+            col1, col2, col3 = st.columns(3)
+            with col1:
+                severity_filter = st.multiselect(
+                    "Filter by Severity",
+                    options=config.SEVERITY_LEVELS,
+                    default=config.SEVERITY_LEVELS
+                )
+            with col2:
+                urgency_filter = st.multiselect(
+                    "Filter by Urgency",
+                    options=config.URGENCY_LEVELS,
+                    default=config.URGENCY_LEVELS
+                )
+            with col3:
+                orgs_df = sqlite_mgr.get_all_organisations()
+                org_filter = st.multiselect(
+                    "Filter by Organisation",
+                    options=orgs_df['org_name'].tolist(),
+                    default=[]
+                )
+
+            # Apply filters
+            filtered_df = pain_points_df[pain_points_df['severity'].isin(severity_filter) & pain_points_df['urgency'].isin(urgency_filter)]
+            if org_filter:
+                filtered_df = filtered_df[filtered_df['org_name'].isin(org_filter)]
+
+            st.dataFrame(
+                filtered_df,
+                use_container_width=True,
+                hide_index=True
+            )
+
+    # Add new
