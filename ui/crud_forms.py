@@ -631,3 +631,151 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.error("❌ Failed to delete pain point")
 
 # ========= Commercial CRUD =========
+
+def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
+    """Render CRUD interface for Commercial entries."""
+
+    st.subheader("💼 Commercial Entries")
+    
+    # Action tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 View All", "➕ Add New", "✏️ Edit", "🗑️ Delete"])
+
+    # View all
+    with tab1:
+        commercial_df = sqlite_mgr.get_all_commercials()
+
+        if commercial_df.empty:
+            st.info("No commercial entries found. Add one using the 'Add New' tab.")
+        else:
+            st.write(f"**Total Commercial Entries: {len(commercial_df)}**")
+            st.write(f"**Total Budget: ${commercial_df['budget'].sum():,.2f}**")
+
+            # Filters
+            col1, col2 = st.columns(2)
+            with col1:
+                method_filter = st.multiselect(
+                    "Filter by method",
+                    options=config.COMMERCIAL_METHODS,
+                    default=config.COMMERCIAL_METHODS
+                )
+            with col2:
+                orgs_df = sqlite_mgr.get_all_organisations()
+                org_filter = st.multiselect(
+                    "Filter by Organisation",
+                    options=orgs_df['org_name'].tolist(),
+                    default=[]
+                )
+
+            # Apply filters
+            filtered_df = commercial_df[commercial_df['method'].isin(method_filter)]
+            if org_filter:
+                filtered_df = filtered_df[filtered_df['org_name'].isin(org_filter)]
+
+            # Format budget for display
+            display_df = filtered_df.copy()
+            display_df['budget'] = display_df['budget'].apply(lambda x: f"£{x/1e6:.2f}m")
+
+            st.dataFrame(
+                display_df,
+                use_container_width=True,
+                hide_index=True
+            )
+
+    # Add new
+    with tab2:
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if orgs_df.empty:
+            st.warning("⚠️ Please add at least one organisation first!")
+        else:
+            with st.form("add_commercial"):
+                st.write("### Add New Commercial Entry")
+
+                next_id = sqlite_mgr.get_next_id("Commercial", "commercial_id")
+                commercial_id = st.number_input(
+                    "Commercial ID",
+                    min_value=1,
+                    value=next_id,
+                    step=1,
+                    help="Unique identifier for the commercial entry."
+                )
+
+                # Select organisation
+                org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
+                selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()))
+                org_id = org_options[selected_org]
+
+                method = st.text_area("Method*", placeholder="Describe the commercial method")
+                budget = st.number_input("Budget (£)*", min_value=0.0, format="%.2f", step=1000.0, help="Budget in GBP")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    submit = st.form_submit_button("Add Commercial Entry", type="primary", use_container_width=True)
+                with col2:
+                    sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                if submit:
+                    success = sqlite_mgr.insert_commercial(
+                        commercial_id, org_id, method, budget
+                    )
+
+                    if success:
+                        st.success(f"✅ Added commercial entry")
+
+                        if sync_to_kuzu:
+                            sync_mgr.sync_commercial(commercial_id)
+                            st.success("✅ Synced to graph database")
+
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to add commercial entry (ID may already exist)")
+
+    # Edit existing
+    with tab3:
+        commercial_df = sqlite_mgr.get_all_commercials()
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if commercial_df.empty:
+            st.info("No commercial entries found. Add one using the 'Add New' tab.")
+        else:
+            commercial_options = {f"{row['method']} - {row['org_name']} - £{row['budget']/1e6:.2f}m (ID: {row['commercial_id']})": row['commercial_id'] for _, row in commercial_df.iterrows()}
+
+            selected_commercial = st.selectbox("Select Commercial Entry to Edit", options=list(commercial_options.keys()))
+
+            if selected_commercial:
+                commercial_id = commercial_options[selected_commercial]
+                commercial_data = commercial_df[commercial_df['commercial_id'] == commercial_id].iloc[0]
+
+                with st.form("edit_commercial"):
+                    st.write(f"### Edit Commercial Entry (ID: {commercial_id})")
+
+                    # Select organisation
+                    org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
+                    current_org_name = commercial_data['org_name']
+                    selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()), index=list(org_options.keys()).index(current_org_name) if current_org_name in org_options.keys() else 0)
+                    org_id = org_options[selected_org]
+
+                    method = st.selectbox("Method*", options=config.COMMERCIAL_METHODS, index=config.COMMERCIAL_METHODS.index(commercial_data['method']))
+                    budget = st.number_input("Budget (£)*", min_value=0.0, value=float(commercial_data['budget']), format="%.2f", step=1000.0)
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        submit = st.form_submit_button("Update Commercial Entry", type="primary", use_container_width=True)
+                    with col2:
+                        sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                    if submit:
+                        success = sqlite_mgr.update_commercial(
+                            commercial_id, org_id, method, budget
+                        )
+
+                        if success:
+                            st.success(f"✅ Updated commercial entry")
+
+                            if sync_to_kuzu:
+                                sync_mgr.sync_commercial(commercial_id)
+                                st.success("✅ Synced to graph database")
+
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to update commercial entry")
