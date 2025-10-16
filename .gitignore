@@ -2,7 +2,8 @@
 data/processed/*
 data/raw/*
 explorer.db
-govmap_db
+govmap.db
+govmap.kuzu
 
 
 # Byte-compiled / optimized / DLL files

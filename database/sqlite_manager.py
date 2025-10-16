@@ -3,6 +3,7 @@ import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Any, Optional
 import config
+from utils import validators
 
 class SQLiteManager:
     def __init__(self, db_path: Path = config.SQLITE_DB):
@@ -90,10 +91,11 @@ class SQLiteManager:
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
+            org_type_norm = validators.normalize_org_type(org_type)
             cursor.execute("""
                 INSERT INTO Organisation (org_id, org_name, org_type, org_function)
                 VALUES (?, ?, ?, ?)
-            """, (org_id, org_name, org_type, org_function))
+            """, (org_id, org_name, org_type_norm, org_function))
             conn.commit()
             return True
         except sqlite3.IntegrityError as e:
@@ -135,10 +137,11 @@ class SQLiteManager:
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
+            budget_norm = validators.parse_budget(budget)
             cursor.execute("""
                 INSERT INTO Commercial (commercial_id, org_id, method, budget)
                 VALUES (?, ?, ?, ?)
-            """, (commercial_id, org_id, method, budget))
+            """, (commercial_id, org_id, method, budget_norm))
             conn.commit()
             return True
         except sqlite3.IntegrityError as e:
@@ -150,10 +153,11 @@ class SQLiteManager:
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
+            relationship_type_norm = validators.normalize_relationship_type(relationship_type)
             cursor.execute("""
                 INSERT INTO OrgRelationships (from_org_id, to_org_id, relationship_type)
                 VALUES (?, ?, ?)
-            """, (from_org_id, to_org_id, relationship_type))
+            """, (from_org_id, to_org_id, relationship_type_norm))
             conn.commit()
             return True
         except sqlite3.IntegrityError as e:

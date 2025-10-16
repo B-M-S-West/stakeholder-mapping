@@ -9,6 +9,7 @@ EXPORT_DIR = DATA_DIR / "exports"
 
 # Database paths
 SQLITE_DB = PROJECT_ROOT / "govmap.db"
+# Kuzu DB directory / file
 KUZU_DB = PROJECT_ROOT / "govmap.kuzu"
 
 # Ensure directories exist
@@ -25,8 +26,8 @@ TABLES = {
     "OrgRelationships": ["from_org_id", "to_org_id", "relationship_type"],
 }
 
-# Organization types
-ORG_TYPES = ["department", "agency", "NDPB"]
+# Organization types (canonical lowercase)
+ORG_TYPES = ["department", "agency", "ndpb"]
 
 # Relationship types
 RELATIONSHIP_TYPES = ["oversight", "supplier", "consumer", "mission"]

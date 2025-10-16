@@ -4,6 +4,7 @@ from pyvis.network import Network
 import pandas as pd
 from database.kuzu_manager import KuzuManager
 import config
+from utils import validators
 
 
 def render_graph_explorer(kuzu_mgr: KuzuManager):
@@ -61,15 +62,18 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
 
         for node in nodes:
             include = False
+            # Normalize type/org_type for robust comparisons
+            ntype = validators.normalize_node_type(node.get("type"))
+            org_type = validators.normalize_org_type(node.get("org_type"))
 
-            if node["type"] == "organisation" and show_orgs:
-                if node["org_type"] in org_type_filter:
+            if ntype == "organisation" and show_orgs:
+                if org_type in [validators.normalize_org_type(x) for x in org_type_filter]:
                     include = True
-            elif node["type"] == "stakeholder" and show_stakeholders:
+            elif ntype == "stakeholder" and show_stakeholders:
                 include = True
-            elif node["type"] == "painpoint" and show_painpoints:
+            elif ntype == "painpoint" and show_painpoints:
                 include = True
-            elif node["type"] == "commercial" and show_commercials:
+            elif ntype == "commercial" and show_commercials:
                 include = True
 
             if include:
@@ -90,11 +94,11 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
         with col2:
             st.metric("Edges", len(filtered_edges))
         with col3:
-            org_count = sum(1 for n in filtered_nodes if n["type"] == "organisation")
+            org_count = sum(1 for n in filtered_nodes if validators.normalize_node_type(n.get("type")) == "organisation")
             st.metric("Organisations", org_count)
         with col4:
             stakeholder_count = sum(
-                1 for n in filtered_nodes if n["type"] == "stakeholder"
+                1 for n in filtered_nodes if validators.normalize_node_type(n.get("type")) == "stakeholder"
             )
             st.metric("Stakeholders", stakeholder_count)
 
@@ -121,26 +125,29 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
         # Add nodes
         for node in filtered_nodes:
             # Determine color based on type
-            if node["type"] == "organisation":
-                if node["org_type"] == "department":
+            ntype = validators.normalize_node_type(node.get("type"))
+            org_type = validators.normalize_org_type(node.get("org_type"))
+
+            if ntype == "organisation":
+                if org_type == "department":
                     color = "#2980b9"  # Blue
-                elif node["org_type"] == "agency":
+                elif org_type == "agency":
                     color = "#16a085"  # Teal
-                elif node["org_type"] == "NDPB":
+                elif org_type == "ndpb":
                     color = "#d35400"  # Orange
                 else:
                     color = "#7f8c8d"  # Gray
                 size = 30
                 shape = "dot"
-            elif node["type"] == "stakeholder":
+            elif ntype == "stakeholder":
                 color = "#27ae60"  # Green
                 size = 20
                 shape = "dot"
-            elif node["type"] == "painpoint":
+            elif ntype == "painpoint":
                 color = "#c0392b"  # Red
                 size = 15
                 shape = "triangle"
-            elif node["type"] == "commercial":
+            elif ntype == "commercial":
                 color = "#f39c12"  # Orange
                 size = 15
                 shape = "square"
@@ -151,16 +158,16 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
 
             # Create hover title with details
             title = f"<b>{node['label']}</b><br>"
-            if node["type"] == "organisation":
-                title += f"Type: {node['org_type']}<br>"
+            if ntype == "organisation":
+                title += f"Type: {org_type}<br>"
                 title += f"Function: {node.get('function', 'N/A')}"
-            elif node["type"] == "stakeholder":
+            elif ntype == "stakeholder":
                 title += f"Job Title: {node.get('job_title', 'N/A')}<br>"
                 title += f"Role: {node.get('role', 'N/A')}"
-            elif node["type"] == "painpoint":
+            elif ntype == "painpoint":
                 title += f"Severity: {node.get('severity', 'N/A')}<br>"
                 title += f"Urgency: {node.get('urgency', 'N/A')}"
-            elif node["type"] == "commercial":
+            elif ntype == "commercial":
                 title += f"Method: {node.get('method', 'N/A')}<br>"
                 title += f"Budget: £{node.get('budget', 0) / 1e6:.2f}m"
 
@@ -176,14 +183,17 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
         # Add edges
         for edge in filtered_edges:
             # Determine edge color based on type
-            if edge["type"] == "org_relation":
-                if edge["label"] == "mission":
+            etype = validators.normalize_node_type(edge.get("type"))
+            elabel = validators.normalize_relationship_type(edge.get("label"))
+
+            if etype == "org_relation":
+                if elabel == "mission":
                     color = "#9b59b6"  # Purple
-                elif edge["label"] == "supplier":
+                elif elabel == "supplier":
                     color = "#27ae60"  # Green
-                elif edge["label"] == "consumer":
+                elif elabel == "consumer":
                     color = "#f39c12"  # Orange
-                elif edge["label"] == "oversight":
+                elif elabel == "oversight":
                     color = "#e74c3c"  # Red
                 else:
                     color = "#bdc3c7"  # Gray
@@ -237,7 +247,7 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
 
         # Create a searchable dropdown of all nodes
         node_options = {
-            f"{node['label']} ({node['type']})": node for node in filtered_nodes
+            f"{node['label']} ({validators.normalize_node_type(node.get('type'))})": node for node in filtered_nodes
         }
         selected_node_label = st.selectbox(
             "Select a node to view details", options=list(node_options.keys())
@@ -249,22 +259,24 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
             col1, col2 = st.columns(2)
 
             with col1:
-                st.write(f"**Type:** {selected_node['type'].title()}")
+                sel_type = validators.normalize_node_type(selected_node.get('type'))
+                sel_org_type = validators.normalize_org_type(selected_node.get('org_type'))
+                st.write(f"**Type:** {sel_type.title()}")
                 st.write(f"**Label:** {selected_node['label']}")
 
-                if selected_node["type"] == "organisation":
-                    st.write(f"**Org Type:** {selected_node['org_type']}")
+                if sel_type == "organisation":
+                    st.write(f"**Org Type:** {sel_org_type}")
                     st.write(f"**Function:** {selected_node.get('function', 'N/A')}")
-                elif selected_node["type"] == "stakeholder":
+                elif sel_type == "stakeholder":
                     st.write(f"**Job Title:** {selected_node.get('job_title', 'N/A')}")
                     st.write(f"**Role:** {selected_node.get('role', 'N/A')}")
-                elif selected_node["type"] == "painpoint":
+                elif sel_type == "painpoint":
                     st.write(f"**Severity:** {selected_node.get('severity', 'N/A')}")
                     st.write(f"**Urgency:** {selected_node.get('urgency', 'N/A')}")
-                elif selected_node["type"] == "commercial":
+                elif sel_type == "commercial":
                     st.write(f"**Method:** {selected_node.get('method', 'N/A')}")
                     st.write(
-                        f"**Budget:** £{selected_node.get('budget', 0) / 1e6:.2f}m"
+                        f"**Budget:** £{(selected_node.get('budget', 0) or 0) / 1e6:.2f}m"
                     )
 
             with col2:

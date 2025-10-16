@@ -81,7 +81,7 @@ if page == "📊 Dashboard":
         stakeholders_df = sqlite_mgr.get_all_stakeholders()
         painpoints_df = sqlite_mgr.get_all_painpoints()
         commercials_df = sqlite_mgr.get_all_commercials()
-        relationships_df = sqlite_mgr.get_all_relationships()
+        relationships_df = sqlite_mgr.get_all_org_relationships()
         
         with col1:
             st.metric("Total Organisations", len(orgs_df))

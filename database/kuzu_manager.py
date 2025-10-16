@@ -4,6 +4,7 @@ import kuzu
 from pathlib import Path
 from typing import List, Dict, Any
 import config
+from utils import validators
 
 class KuzuManager:
     def __init__(self, db_path: Path = config.KUZU_DB):
@@ -270,6 +271,11 @@ class KuzuManager:
         if relationship_filters is None:
             relationship_filters = config.RELATIONSHIP_TYPES
 
+        # sanitize relationship filters against allowed set
+        relationship_filters = validators.safe_rel_filter_list(relationship_filters, config.RELATIONSHIP_TYPES)
+        if not relationship_filters:
+            relationship_filters = [r.lower() for r in config.RELATIONSHIP_TYPES]
+
         nodes = []
         edges = []
 
@@ -280,11 +286,12 @@ class KuzuManager:
         """).get_as_df()
 
         for _, row in orgs.iterrows():
+            org_type = validators.normalize_org_type(row['o.org_type'])
             nodes.append({
                 'id': f"org{row['o.org_id']}",
                 'label': row['o.org_name'],
-                'type': 'Organisation',
-                'org_type': row['o.org_type'],
+                'type': 'organisation',
+                'org_type': org_type,
                 'function': row['o.org_function']
             })
 
@@ -300,8 +307,8 @@ class KuzuManager:
             edges.append({
                 'from': f"org{row['a.org_id']}",
                 'to': f"org{row['b.org_id']}",
-                'label': row['r.relationship_type'],
-                'type': 'OrgRelation'
+                'label': validators.normalize_relationship_type(row['r.relationship_type']),
+                'type': 'org_relation'
             })
 
         # Get stakeholders
@@ -314,15 +321,15 @@ class KuzuManager:
             nodes.append({
                 'id': f"st{row['s.stakeholder_id']}",
                 'label': row['s.name'],
-                'type': 'Stakeholder',
+                'type': 'stakeholder',
                 'job_title': row['s.job_title'],
                 'role': row['s.role']
             })
             edges.append({
                 'from': f"org{row['o.org_id']}",
                 'to': f"st{row['s.stakeholder_id']}",
-                'label': 'HasStakeholder',
-                'type': 'HasStakeholder'
+                'label': 'has_stakeholder',
+                'type': 'has_stakeholder'
             })
 
         # Get pain points
@@ -342,7 +349,7 @@ class KuzuManager:
             edges.append({
                 'from': f"org{row['o.org_id']}",
                 'to': f"pp{row['p.painpoint_id']}",
-                'label': 'painpoint',
+                'label': 'has_painpoint',
                 'type': 'has_painpoint'
             })
         
@@ -353,17 +360,19 @@ class KuzuManager:
         """).get_as_df()
 
         for _, row in commercials.iterrows():
+            method = row['c.method']
+            budget = validators.parse_budget(row['c.budget'])
             nodes.append({
                 'id': f"com{row['c.commercial_id']}",
-                'label': f"{row['c.method']} (£{row['c.budget']/1e6:.1f}m)",
+                'label': f"{method} (£{(budget or 0)/1e6:.1f}m)",
                 'type': 'commercial',
-                'method': row['c.method'],
-                'budget': row['c.budget']
+                'method': method,
+                'budget': budget
             })
             edges.append({
                 'from': f"org{row['o.org_id']}",
                 'to': f"com{row['c.commercial_id']}",
-                'label': 'commercial',
+                'label': 'procures_through',
                 'type': 'procures_through'
             })
 
