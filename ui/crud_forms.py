@@ -236,3 +236,100 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.error("❌ Failed to delete organisation")
 
 # ========= Stakeholder CRUD =========
+
+def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
+    """Render CRUD interface for Stakeholders."""
+
+    st.subheader("👤 Stakeholders")
+    
+    # Action tabs
+    tab1, tab2, tab3, tab4 = st.tabs(["📋 View All", "➕ Add New", "✏️ Edit", "🗑️ Delete"])
+
+    # View all
+    with tab1:
+        stakeholders_df = sqlite_mgr.get_all_stakeholders()
+
+        if stakeholders_df.empty:
+            st.info("No stakeholders found. Add one using the 'Add New' tab.")
+        else:
+            st.write(f"**Total Stakeholders: {len(stakeholders_df)}**")
+
+            # Filters
+            orgs_df = sqlite_mgr.get_all_organisations()
+            org_filter = st.multiselect(
+                "Filter by Organisation",
+                options=orgs_df['org_name'].tolist(),
+                default=[]
+            )
+
+            search_term = st.text_input("Search by name", "")
+
+            # Apply filters
+            filtered_df = stakeholders_df.copy()
+            if org_filter:
+                filtered_df = filtered_df[filtered_df['org_name'].isin(org_filter)]
+            if search_term:
+                filtered_df = filtered_df[
+                    filtered_df['name'].str.contains(search_term, case=False, na=False)
+                ]
+
+            st.dataFrame(
+                filtered_df,
+                use_container_width=True,
+                hide_index=True
+            )
+
+    # Add new
+    with tab2:
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if orgs_df.empty:
+            st.warning("⚠️ Please add at least one organisation first!")
+        else:
+            with st.form("add_stakeholder"):
+                st.write("### Add New Stakeholder")
+
+                next_id = sqlite_mgr.get_next_id("Stakeholder", "stakeholder_id")
+                stakeholder_id = st.number_input(
+                    "Stakeholder ID",
+                    min_value=1,
+                    value=next_id,
+                    step=1,
+                    help="Unique identifier for the stakeholder."
+                )
+
+                # Select organisation
+                org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
+                selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()))
+                org_id = org_options[selected_org]
+
+                name = st.text_input("Name*", placeholder="Enter stakeholder name")
+                job_title = st.text_input("Job Title", placeholder="Enter job title")
+                role = st.text_input("Role", placeholder="Enter role")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    submit = st.form_submit_button("Add Stakeholder", type="primary", use_container_width=True)
+                with col2:
+                    sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                if submit:
+                    if not name:
+                        st.error("Stakeholder name is required!")
+                    else:
+                        success = sqlite_mgr.insert_stakeholder(
+                            stakeholder_id, org_id, name, job_title, role
+                        )
+
+                        if success:
+                            st.success(f"✅ Added stakeholder: {name}")
+
+                            if sync_to_kuzu:
+                                sync_mgr.sync_stakeholder(stakeholder_id)
+                                st.success("✅ Synced to graph database")
+
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to add stakeholder (ID may already exist)")
+
+    # Edit existing
