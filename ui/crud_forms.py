@@ -1,4 +1,5 @@
 from email.policy import default
+import select
 import streamlit as st
 import pandas as pd
 from database.sqlite_manager import SQLiteManager
@@ -140,3 +141,55 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.error("❌ Failed to add organisation (ID or name may already exist)")
                         
     # Edit existing
+    with tab3:
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if orgs_df.empty:
+            st.info("No organisations found. Please add some.")
+        else:
+            # Select organisation to edit
+            org_options = {f"{row['org_name']} (ID: {row['org_id']})": row['org_id'] for _, row in orgs_df.iterrows()}
+
+            selected_org = st.selectbox("Select Organisation to Edit", options=list(org_options.keys()))
+
+            if selected_org:
+                org_id = org_options[selected_org]
+                org_data = sqlite_mgr.get_organisation_by_id(org_id)
+
+                with st.form("edit_organisation"):
+                    st.write(f"### Edit Organisation: {org_data['org_name']}")
+
+                    org_name = st.text_input("Organisation Name*", value=org_data['org_name'])
+                    org_type = st.selectbox(
+                        "Type*",
+                        options=config.ORG_TYPES,
+                        index=config.ORG_TYPES.index(org_data['org_type'])
+                    )
+                    org_function = st.text_area("Function", value=org_data['org_function'] or "")
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        submit = st.form_submit_button("Update Organisation", type="primary", use_container_width=True)
+                    with col2:
+                        sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                    if submit:
+                        if not org_name:
+                            st.error("Organisation name is required!")
+                        else:
+                            success =sqlite_mgr.update_organisation(
+                                org_id, org_name, org_type, org_function
+                            )
+
+                            if success:
+                                st.success(f"✅ Updated organisation: {org_name}")
+
+                                if sync_to_kuzu:
+                                    sync_mgr.sync_organisation(org_id)
+                                    st.success("✅ Synced to graph database")
+
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to update organisation (name may already exist)")
+
+    # Delete
