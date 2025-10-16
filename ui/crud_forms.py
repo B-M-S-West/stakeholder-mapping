@@ -479,3 +479,56 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             )
 
     # Add new
+    with tab2:
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if orgs_df.empty:
+            st.warning("⚠️ Please add at least one organisation first!")
+        else:
+            with st.form("add_painpoint"):
+                st.write("### Add New Pain Point")
+
+                next_id = sqlite_mgr.get_next_id("PainPoint", "painpoint_id")
+                painpoint_id = st.number_input(
+                    "Pain Point ID",
+                    min_value=1,
+                    value=next_id,
+                    step=1,
+                    help="Unique identifier for the pain point."
+                )
+
+                # Select organisation
+                org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
+                selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()))
+                org_id = org_options[selected_org]
+
+                description = st.text_area("Description*", placeholder="Describe the pain point")
+                severity = st.selectbox("Severity*", options=config.SEVERITY_LEVELS, index=2)
+                urgency = st.selectbox("Urgency*", options=config.URGENCY_LEVELS, index=2)
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    submit = st.form_submit_button("Add Pain Point", type="primary", use_container_width=True)
+                with col2:
+                    sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                if submit:
+                    if not description:
+                        st.error("Pain point description is required!")
+                    else:
+                        success = sqlite_mgr.insert_painpoint(
+                            painpoint_id, org_id, description, severity, urgency
+                        )
+
+                        if success:
+                            st.success(f"✅ Added pain point")
+
+                            if sync_to_kuzu:
+                                sync_mgr.sync_painpoint(painpoint_id)
+                                st.success("✅ Synced to graph database")
+
+                            st.rerun()
+                        else:
+                            st.error("❌ Failed to add pain point (ID may already exist)")
+
+    # Edit existing
