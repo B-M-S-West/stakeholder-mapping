@@ -1,3 +1,4 @@
+import dis
 from email.policy import default
 from os import sync
 import select
@@ -819,3 +820,173 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.rerun()
                     else:
                         st.error("❌ Failed to delete commercial entry")
+
+# ============ RELATIONSHIP CRUD ============
+
+
+def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
+    """CRUD interface for organisation relationships"""
+
+    st.subheader("🔗 Organisation Relationships")
+
+    tab1, tab2, tab3 = st.tabs(["📋 View All", "➕ Add New", "🗑️ Delete"])
+
+    # VIEW ALL
+    with tab1:
+        relationships_df = sqlite_mgr.get_all_relationships()
+
+        if relationships_df.empty:
+            st.info("No relationships found. Add one using the 'Add New' tab.")
+        else:
+            st.write(f"**Total Relationships:** {len(relationships_df)}")
+
+            # Filters
+            rel_type_filter = st.multiselect(
+                "Filter by relationship type",
+                options=config.RELATIONSHIP_TYPES,
+                default=config.RELATIONSHIP_TYPES,
+            )
+
+            # Apply filters
+            filtered_df = relationships_df[
+                relationships_df["relationship_type"].isin(rel_type_filter)
+            ]
+
+            # Display
+            display_df = filtered_df[
+                ["from_org_name", "relationship_type", "to_org_name"]
+            ].copy()
+            display_df.columns = [
+                "From Organisation",
+                "Relationship Type",
+                "To Organisation",
+            ]
+
+            st.dataframe(display_df, use_container_width=True, hide_index=True)
+
+            # Relationship statistics
+            st.write("### Relationship Statistics")
+            rel_counts = relationships_df["relationship_type"].value_counts()
+            st.bar_chart(rel_counts)
+
+    # ADD NEW
+    with tab2:
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if len(orgs_df) < 2:
+            st.warning("⚠️ Please add at least two organisations first!")
+        else:
+            with st.form("add_relationship"):
+                st.write("### Add New Relationship")
+
+                org_names = orgs_df["org_name"].tolist()
+                org_id_map = {
+                    row["org_name"]: row["org_id"] for _, row in orgs_df.iterrows()
+                }
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    from_org = st.selectbox(
+                        "From Organisation*", options=org_names, key="from_org"
+                    )
+                with col2:
+                    to_org = st.selectbox(
+                        "To Organisation*", options=org_names, key="to_org"
+                    )
+
+                relationship_type = st.selectbox(
+                    "Relationship Type*", config.RELATIONSHIP_TYPES
+                )
+
+                st.info(
+                    f"This will create: **{from_org}** → [{relationship_type}] → **{to_org}**"
+                )
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    submit = st.form_submit_button(
+                        "Add Relationship", type="primary", use_container_width=True
+                    )
+                with col2:
+                    sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                if submit:
+                    if from_org == to_org:
+                        st.error(
+                            "❌ Cannot create relationship from an organisation to itself!"
+                        )
+                    else:
+                        from_org_id = org_id_map[from_org]
+                        to_org_id = org_id_map[to_org]
+
+                        success = sqlite_mgr.insert_relationship(
+                            from_org_id, to_org_id, relationship_type
+                        )
+
+                        if success:
+                            st.success(f"✅ Added relationship: {from_org} → {to_org}")
+
+                            if sync_to_kuzu:
+                                sync_mgr.sync_relationship(
+                                    from_org_id, to_org_id, relationship_type
+                                )
+                                st.success("✅ Synced to graph database")
+
+                            st.rerun()
+                        else:
+                            st.error(
+                                "❌ Failed to add relationship (may already exist)"
+                            )
+
+    # DELETE
+    with tab3:
+        relationships_df = sqlite_mgr.get_all_relationships()
+
+        if relationships_df.empty:
+            st.info("No relationships to delete.")
+        else:
+            relationship_options = {
+                f"{row['from_org_name']} → [{row['relationship_type']}] → {row['to_org_name']}": (
+                    row["id"],
+                    row["from_org_id"],
+                    row["to_org_id"],
+                    row["relationship_type"],
+                )
+                for _, row in relationships_df.iterrows()
+            }
+
+            selected_relationship = st.selectbox(
+                "Select relationship to delete",
+                options=list(relationship_options.keys()),
+            )
+
+            if selected_relationship:
+                rel_id, from_org_id, to_org_id, rel_type = relationship_options[
+                    selected_relationship
+                ]
+
+                st.write(f"**Relationship:** {selected_relationship}")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    confirm = st.checkbox("Confirm deletion")
+                with col2:
+                    sync_to_kuzu = st.checkbox("Delete from graph", value=True)
+
+                if st.button(
+                    "🗑️ Delete Relationship", type="primary", disabled=not confirm
+                ):
+                    success = sqlite_mgr.delete_relationship(rel_id)
+
+                    if success:
+                        st.success(f"✅ Deleted relationship")
+
+                        if sync_to_kuzu:
+                            sync_mgr.delete_relationship_from_kuzu(
+                                from_org_id, to_org_id, rel_type
+                            )
+                            st.success("✅ Deleted from graph database")
+
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to delete relationship")
