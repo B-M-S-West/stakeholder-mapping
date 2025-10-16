@@ -9,7 +9,7 @@ EXPORT_DIR = DATA_DIR / "exports"
 
 # Database paths
 SQLITE_DB = PROJECT_ROOT / "govmap.db"
-KUZU_DB = PROJECT_ROOT / "govmap_kuzu"
+KUZU_DB = PROJECT_ROOT / "govmap.kuzu"
 
 # Ensure directories exist
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)

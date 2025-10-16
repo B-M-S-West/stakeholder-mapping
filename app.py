@@ -187,4 +187,4 @@ elif page == "⚙️ Settings":
                     sync_mgr.full_sync()
                     st.success("✅ Full sync completed successfully!")
                 except Exception as e:
-                    st.error(f"❌
+                    st.error(f"❌ Full sync failed: {e}")

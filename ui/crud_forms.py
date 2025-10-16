@@ -833,7 +833,7 @@ def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
     # VIEW ALL
     with tab1:
-        relationships_df = sqlite_mgr.get_all_relationships()
+        relationships_df = sqlite_mgr.get_all_org_relationships()
 
         if relationships_df.empty:
             st.info("No relationships found. Add one using the 'Add New' tab.")
@@ -940,7 +940,7 @@ def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
     # DELETE
     with tab3:
-        relationships_df = sqlite_mgr.get_all_relationships()
+        relationships_df = sqlite_mgr.get_all_org_relationships()
 
         if relationships_df.empty:
             st.info("No relationships to delete.")
