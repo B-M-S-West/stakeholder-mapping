@@ -387,3 +387,43 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                 st.error("❌ Failed to update stakeholder")
 
     # Delete
+    with tab4:
+        stakeholders_df = sqlite_mgr.get_all_stakeholders()
+
+        if stakeholders_df.empty:
+            st.info("No stakeholders found. Add one using the 'Add New' tab.")
+        else:
+            stakeholder_options = {f"{row['name']} - {row['org_name']} (ID: {row['stakeholder_id']})": row['stakeholder_id'] for _, row in stakeholders_df.iterrows()}
+
+            selected_stakeholder = st.selectbox("Select Stakeholder to Delete", options=list(stakeholder_options.keys()))
+
+            if selected_stakeholder:
+                stakeholder_id = stakeholder_options[selected_stakeholder]
+                stakeholder_data = stakeholders_df[stakeholders_df['stakeholder_id'] == stakeholder_id].iloc[0]
+
+                st.write(f"**Name:** {stakeholder_data['name']}")
+                st.write(f"**Organisation:** {stakeholder_data['org_name']}")
+                st.write(f"**Job Title:** {stakeholder_data['job_title']}")
+
+                col1, col2 = st.columns(2)
+                with col1:
+                    confirm = st.checkbox("Confirm deletion (this action cannot be undone)")
+
+                with col2:
+                    sync_to_kuzu = st.checkbox("Delete from graph", value=True)
+
+                if st.button("🗑️ Delete Stakeholder", type="primary", disabled=not confirm):
+                    success = sqlite_mgr.delete_stakeholder(stakeholder_id)
+
+                    if success:
+                        st.success(f"✅ Deleted stakeholder: {stakeholder_data['name']}")
+
+                        if sync_to_kuzu:
+                            sync_mgr.delete_stakeholder_from_graph(stakeholder_id)
+                            st.success("✅ Deleted from graph database")
+
+                        st.rerun()
+                    else:
+                        st.error("❌ Failed to delete stakeholder")
+
+# ========= Pain Point CRUD =========
