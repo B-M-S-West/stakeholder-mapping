@@ -1,0 +1,303 @@
+import streamlit as st
+import streamlit.components.v1 as components
+from pyvis.network import Network
+import pandas as pd
+from database.kuzu_manager import KuzuManager
+import config
+
+
+def render_graph_explorer(kuzu_mgr: KuzuManager):
+    """Render interactive graph visualization"""
+
+    st.header("🕸️ Graph Explorer")
+
+    # Sidebar filters
+    with st.sidebar:
+        st.subheader("Graph Filters")
+
+        # Relationship type filter
+        relationship_filters = st.multiselect(
+            "Relationship Types",
+            options=config.RELATIONSHIP_TYPES,
+            default=config.RELATIONSHIP_TYPES,
+        )
+
+        # Node type filter
+        st.write("**Show Node Types:**")
+        show_orgs = st.checkbox("Organisations", value=True)
+        show_stakeholders = st.checkbox("Stakeholders", value=True)
+        show_painpoints = st.checkbox("Pain Points", value=True)
+        show_commercials = st.checkbox("Commercial", value=True)
+
+        # Organization type filter
+        if show_orgs:
+            org_type_filter = st.multiselect(
+                "Organisation Types", options=config.ORG_TYPES, default=config.ORG_TYPES
+            )
+        else:
+            org_type_filter = []
+
+        # Layout options
+        st.subheader("Layout Options")
+        physics_enabled = st.checkbox("Enable Physics", value=True)
+
+        layout_algorithm = st.selectbox(
+            "Layout Algorithm", ["barnes_hut", "force_atlas_2based", "hierarchical"]
+        )
+
+        # Refresh button
+        if st.button("🔄 Refresh Graph", use_container_width=True):
+            st.rerun()
+
+    # Get graph data from Kuzu
+    try:
+        graph_data = kuzu_mgr.get_graph_data(relationship_filters)
+        nodes = graph_data["nodes"]
+        edges = graph_data["edges"]
+
+        # Filter nodes based on user selection
+        filtered_nodes = []
+        filtered_node_ids = set()
+
+        for node in nodes:
+            include = False
+
+            if node["type"] == "organisation" and show_orgs:
+                if node["org_type"] in org_type_filter:
+                    include = True
+            elif node["type"] == "stakeholder" and show_stakeholders:
+                include = True
+            elif node["type"] == "painpoint" and show_painpoints:
+                include = True
+            elif node["type"] == "commercial" and show_commercials:
+                include = True
+
+            if include:
+                filtered_nodes.append(node)
+                filtered_node_ids.add(node["id"])
+
+        # Filter edges to only include those between visible nodes
+        filtered_edges = [
+            edge
+            for edge in edges
+            if edge["from"] in filtered_node_ids and edge["to"] in filtered_node_ids
+        ]
+
+        # Display statistics
+        col1, col2, col3, col4 = st.columns(4)
+        with col1:
+            st.metric("Nodes", len(filtered_nodes))
+        with col2:
+            st.metric("Edges", len(filtered_edges))
+        with col3:
+            org_count = sum(1 for n in filtered_nodes if n["type"] == "organisation")
+            st.metric("Organisations", org_count)
+        with col4:
+            stakeholder_count = sum(
+                1 for n in filtered_nodes if n["type"] == "stakeholder"
+            )
+            st.metric("Stakeholders", stakeholder_count)
+
+        # Create PyVis network
+        net = Network(
+            height="700px",
+            width="100%",
+            bgcolor="#222222",
+            font_color="white",
+            notebook=False,
+        )
+
+        # Configure physics
+        if physics_enabled:
+            if layout_algorithm == "barnes_hut":
+                net.barnes_hut()
+            elif layout_algorithm == "force_atlas_2based":
+                net.force_atlas_2based()
+            elif layout_algorithm == "hierarchical":
+                net.show_buttons(filter_=["physics"])
+        else:
+            net.toggle_physics(False)
+
+        # Add nodes
+        for node in filtered_nodes:
+            # Determine color based on type
+            if node["type"] == "organisation":
+                if node["org_type"] == "department":
+                    color = "#2980b9"  # Blue
+                elif node["org_type"] == "agency":
+                    color = "#16a085"  # Teal
+                elif node["org_type"] == "NDPB":
+                    color = "#d35400"  # Orange
+                else:
+                    color = "#7f8c8d"  # Gray
+                size = 30
+                shape = "dot"
+            elif node["type"] == "stakeholder":
+                color = "#27ae60"  # Green
+                size = 20
+                shape = "dot"
+            elif node["type"] == "painpoint":
+                color = "#c0392b"  # Red
+                size = 15
+                shape = "triangle"
+            elif node["type"] == "commercial":
+                color = "#f39c12"  # Orange
+                size = 15
+                shape = "square"
+            else:
+                color = "#95a5a6"
+                size = 15
+                shape = "dot"
+
+            # Create hover title with details
+            title = f"<b>{node['label']}</b><br>"
+            if node["type"] == "organisation":
+                title += f"Type: {node['org_type']}<br>"
+                title += f"Function: {node.get('function', 'N/A')}"
+            elif node["type"] == "stakeholder":
+                title += f"Job Title: {node.get('job_title', 'N/A')}<br>"
+                title += f"Role: {node.get('role', 'N/A')}"
+            elif node["type"] == "painpoint":
+                title += f"Severity: {node.get('severity', 'N/A')}<br>"
+                title += f"Urgency: {node.get('urgency', 'N/A')}"
+            elif node["type"] == "commercial":
+                title += f"Method: {node.get('method', 'N/A')}<br>"
+                title += f"Budget: £{node.get('budget', 0) / 1e6:.2f}m"
+
+            net.add_node(
+                node["id"],
+                label=node["label"],
+                title=title,
+                color=color,
+                size=size,
+                shape=shape,
+            )
+
+        # Add edges
+        for edge in filtered_edges:
+            # Determine edge color based on type
+            if edge["type"] == "org_relation":
+                if edge["label"] == "mission":
+                    color = "#9b59b6"  # Purple
+                elif edge["label"] == "supplier":
+                    color = "#27ae60"  # Green
+                elif edge["label"] == "consumer":
+                    color = "#f39c12"  # Orange
+                elif edge["label"] == "oversight":
+                    color = "#e74c3c"  # Red
+                else:
+                    color = "#bdc3c7"  # Gray
+                width = 2
+            else:
+                color = "#7f8c8d"  # Gray for other relationships
+                width = 1
+
+            net.add_edge(
+                edge["from"],
+                edge["to"],
+                title=edge["label"],
+                color=color,
+                width=width,
+                arrows="to",
+            )
+
+        # Generate and display graph
+        net.save_graph("graph.html")
+
+        # Read the HTML file
+        with open("graph.html", "r", encoding="utf-8") as f:
+            html_content = f.read()
+
+        # Display in Streamlit
+        components.html(html_content, height=750)
+
+        # Legend
+        with st.expander("📖 Legend", expanded=False):
+            st.write("### Node Types")
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.markdown("🔵 **Department** - Blue circle")
+                st.markdown("🟢 **Agency** - Teal circle")
+                st.markdown("🟠 **NDPB** - Orange circle")
+                st.markdown("🟢 **Stakeholder** - Green circle")
+
+            with col2:
+                st.markdown("🔺 **Pain Point** - Red triangle")
+                st.markdown("🟨 **Commercial** - Orange square")
+
+            st.write("### Relationship Types")
+            st.markdown("🟣 **Mission** - Purple arrow")
+            st.markdown("🟢 **Supplier** - Green arrow")
+            st.markdown("🟠 **Consumer** - Orange arrow")
+            st.markdown("🔴 **Oversight** - Red arrow")
+
+        # Node details panel
+        st.subheader("📊 Node Details")
+
+        # Create a searchable dropdown of all nodes
+        node_options = {
+            f"{node['label']} ({node['type']})": node for node in filtered_nodes
+        }
+        selected_node_label = st.selectbox(
+            "Select a node to view details", options=list(node_options.keys())
+        )
+
+        if selected_node_label:
+            selected_node = node_options[selected_node_label]
+
+            col1, col2 = st.columns(2)
+
+            with col1:
+                st.write(f"**Type:** {selected_node['type'].title()}")
+                st.write(f"**Label:** {selected_node['label']}")
+
+                if selected_node["type"] == "organisation":
+                    st.write(f"**Org Type:** {selected_node['org_type']}")
+                    st.write(f"**Function:** {selected_node.get('function', 'N/A')}")
+                elif selected_node["type"] == "stakeholder":
+                    st.write(f"**Job Title:** {selected_node.get('job_title', 'N/A')}")
+                    st.write(f"**Role:** {selected_node.get('role', 'N/A')}")
+                elif selected_node["type"] == "painpoint":
+                    st.write(f"**Severity:** {selected_node.get('severity', 'N/A')}")
+                    st.write(f"**Urgency:** {selected_node.get('urgency', 'N/A')}")
+                elif selected_node["type"] == "commercial":
+                    st.write(f"**Method:** {selected_node.get('method', 'N/A')}")
+                    st.write(
+                        f"**Budget:** £{selected_node.get('budget', 0) / 1e6:.2f}m"
+                    )
+
+            with col2:
+                # Find connected nodes
+                connected_edges = [
+                    e
+                    for e in filtered_edges
+                    if e["from"] == selected_node["id"]
+                    or e["to"] == selected_node["id"]
+                ]
+                st.write(f"**Connections:** {len(connected_edges)}")
+
+                if connected_edges:
+                    st.write("**Connected to:**")
+                    for edge in connected_edges[:5]:  # Show first 5
+                        if edge["from"] == selected_node["id"]:
+                            target_node = next(
+                                (n for n in filtered_nodes if n["id"] == edge["to"]),
+                                None,
+                            )
+                            if target_node:
+                                st.write(f"→ {target_node['label']} ({edge['label']})")
+                        else:
+                            source_node = next(
+                                (n for n in filtered_nodes if n["id"] == edge["from"]),
+                                None,
+                            )
+                            if source_node:
+                                st.write(f"← {source_node['label']} ({edge['label']})")
+
+                    if len(connected_edges) > 5:
+                        st.write(f"... and {len(connected_edges) - 5} more")
+
+    except Exception as e:
+        st.error(f"Error loading graph: {e}")
+        st.write("Please ensure the graph database is synced with the latest data.")
