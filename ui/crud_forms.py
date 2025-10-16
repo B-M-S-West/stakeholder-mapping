@@ -532,3 +532,61 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             st.error("❌ Failed to add pain point (ID may already exist)")
 
     # Edit existing
+    with tab3:
+        painpoints_df = sqlite_mgr.get_all_painpoints()
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if painpoints_df.empty:
+            st.info("No pain points found. Add one using the 'Add New' tab.")
+        else:
+            painpoint_options = {f"{row['description'][:50]}... - {row['org_name']} (ID: {row['painpoint_id']})": row['painpoint_id'] for _, row in painpoints_df.iterrows()}
+
+            selected_painpoint = st.selectbox("Select Pain Point to Edit", options=list(painpoint_options.keys()))
+
+            if selected_painpoint:
+                painpoint_id = painpoint_options[selected_painpoint]
+                painpoint_data = painpoints_df[painpoints_df['painpoint_id'] == painpoint_id].iloc[0]
+
+                with st.form("edit_painpoint"):
+                    st.write(f"### Edit Pain Point (ID: {painpoint_id})")
+
+                    # Select organisation
+                    org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
+                    current_org_name = painpoint_data['org_name']
+                    selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()), index=list(org_options.keys()).index(current_org_name) if current_org_name in org_options.keys() else 0)
+                    org_id = org_options[selected_org]
+
+                    description = st.text_area("Description*", value=painpoint_data['description'])
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        severity = st.selectbox("Severity*", options=config.SEVERITY_LEVELS, index=config.SEVERITY_LEVELS.index(painpoint_data['severity']))
+                    with col2:
+                        urgency = st.selectbox("Urgency*", options=config.URGENCY_LEVELS, index=config.URGENCY_LEVELS.index(painpoint_data['urgency']))
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        submit = st.form_submit_button("Update Pain Point", type="primary", use_container_width=True)
+                    with col2:
+                        sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                    if submit:
+                        if not description:
+                            st.error("Pain point description is required!")
+                        else:
+                            success = sqlite_mgr.update_painpoint(
+                                painpoint_id, org_id, description, severity, urgency
+                            )
+
+                            if success:
+                                st.success(f"✅ Updated pain point")
+
+                                if sync_to_kuzu:
+                                    sync_mgr.sync_painpoint(painpoint_id)
+                                    st.success("✅ Synced to graph database")
+
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to update pain point")
+
+    # Delete
