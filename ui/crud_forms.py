@@ -333,3 +333,57 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             st.error("❌ Failed to add stakeholder (ID may already exist)")
 
     # Edit existing
+    with tab3:
+        stakeholders_df = sqlite_mgr.get_all_stakeholders()
+        orgs_df = sqlite_mgr.get_all_organisations()
+
+        if stakeholders_df.empty:
+            st.info("No stakeholders found. Add one using the 'Add New' tab.")
+        else:
+            stakeholder_options = {f"{row['name']} - {row['org_name']} (ID: {row['stakeholder_id']})": row['stakeholder_id'] for _, row in stakeholders_df.iterrows()}
+
+            selected_stakeholder = st.selectbox("Select Stakeholder to Edit", options=list(stakeholder_options.keys()))
+
+            if selected_stakeholder:
+                stakeholder_id = stakeholder_options[selected_stakeholder]
+                stakeholder_data = stakeholders_df[stakeholders_df['stakeholder_id'] == stakeholder_id].iloc[0]
+
+                with st.form("edit_stakeholder"):
+                    st.write(f'### Edit Stakeholder: {stakeholder_data["name"]}')
+
+                    # Select organisation
+                    org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
+                    current_org_name = stakeholder_data['org_name']
+                    selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()), index=list(org_options.keys()).index(current_org_name) if current_org_name in org_options.keys() else 0)
+                    org_id = org_options[selected_org]
+
+                    name = st.text_input("Name*", value=stakeholder_data['name'])
+                    job_title = st.text_input("Job Title", value=stakeholder_data['job_title'] or "")
+                    role = st.text_input("Role", value=stakeholder_data['role'] or "")
+
+                    col1, col2 = st.columns(2)
+                    with col1:
+                        submit = st.form_submit_button("Update Stakeholder", type="primary", use_container_width=True)
+                    with col2:
+                        sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+                    if submit:
+                        if not name:
+                            st.error("Stakeholder name is required!")
+                        else:
+                            success = sqlite_mgr.update_stakeholder(
+                                stakeholder_id, org_id, name, job_title, role
+                            )
+
+                            if success:
+                                st.success(f"✅ Updated stakeholder: {name}")
+
+                                if sync_to_kuzu:
+                                    sync_mgr.sync_stakeholder(stakeholder_id)
+                                    st.success("✅ Synced to graph database")
+
+                                st.rerun()
+                            else:
+                                st.error("❌ Failed to update stakeholder")
+
+    # Delete
