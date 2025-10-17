@@ -5,7 +5,6 @@ from database.sync_manager import SyncManager
 from ui.crud_forms import render_crud_interface
 from ui.graph_viz import render_graph_explorer
 from ui.import_export import render_import_export
-import config
 
 # Page configuration
 st.set_page_config(
@@ -143,19 +142,19 @@ if page == "📊 Dashboard":
         
         with tab1:
             if not orgs_df.empty:
-                st.dataframe(orgs_df.tail(5), use_container_width=True, hide_index=True)
+                st.dataframe(orgs_df.tail(5), width='stretch', hide_index=True)
             else:
                 st.info("No organisations yet")
         
         with tab2:
             if not stakeholders_df.empty:
-                st.dataframe(stakeholders_df[['name', 'org_name', 'job_title']].tail(5), use_container_width=True, hide_index=True)
+                st.dataframe(stakeholders_df[['name', 'org_name', 'job_title']].tail(5), width='stretch', hide_index=True)
             else:
                 st.info("No stakeholders yet")
         
         with tab3:
             if not painpoints_df.empty:
-                st.dataframe(painpoints_df[['description', 'org_name', 'severity', 'urgency']].tail(5), use_container_width=True, hide_index=True)
+                st.dataframe(painpoints_df[['description', 'org_name', 'severity', 'urgency']].tail(5), width='stretch', hide_index=True)
             else:
                 st.info("No pain points yet")
     
@@ -181,7 +180,7 @@ elif page == "⚙️ Settings":
     with col1:
         st.write("### Sync Operations")
         
-        if st.button("🔄 Full Sync (SQLite → Kuzu)", use_container_width=True):
+        if st.button("🔄 Full Sync (SQLite → Kuzu)", width='stretch'):
             with st.spinner("Syncing all data to graph database..."):
                 try:
                     sync_mgr.full_sync()

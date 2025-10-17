@@ -65,7 +65,7 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 
                 st.dataframe(
                     filtered_df,
-                    use_container_width=True,
+                    width='stretch',
                     hide_index=True
                 )
 

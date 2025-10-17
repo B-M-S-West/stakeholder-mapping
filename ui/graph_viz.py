@@ -47,7 +47,7 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
         )
 
         # Refresh button
-        if st.button("🔄 Refresh Graph", use_container_width=True):
+        if st.button("🔄 Refresh Graph", width='stretch'):
             st.rerun()
 
     # Get graph data from Kuzu
