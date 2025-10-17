@@ -1,7 +1,6 @@
 import streamlit as st
 import streamlit.components.v1 as components
 from pyvis.network import Network
-import pandas as pd
 from database.kuzu_manager import KuzuManager
 import config
 from utils import validators
@@ -156,20 +155,22 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
                 size = 15
                 shape = "dot"
 
-            # Create hover title with details
-            title = f"<b>{node['label']}</b><br>"
+            # Create hover title with details (no HTML; use \n for new lines)
+            lines = [f"{node['label']}"]  # No <b> or </b>
             if ntype == "organisation":
-                title += f"Type: {org_type}<br>"
-                title += f"Function: {node.get('function', 'N/A')}"
+                lines.append(f"Type: {org_type}")
+                lines.append(f"Function: {node.get('function', 'N/A')}")
             elif ntype == "stakeholder":
-                title += f"Job Title: {node.get('job_title', 'N/A')}<br>"
-                title += f"Role: {node.get('role', 'N/A')}"
+                lines.append(f"Job Title: {node.get('job_title', 'N/A')}")
+                lines.append(f"Role: {node.get('role', 'N/A')}")
             elif ntype == "painpoint":
-                title += f"Severity: {node.get('severity', 'N/A')}<br>"
-                title += f"Urgency: {node.get('urgency', 'N/A')}"
+                lines.append(f"Severity: {node.get('severity', 'N/A')}")
+                lines.append(f"Urgency: {node.get('urgency', 'N/A')}")
             elif ntype == "commercial":
-                title += f"Method: {node.get('method', 'N/A')}<br>"
-                title += f"Budget: £{node.get('budget', 0) / 1e6:.2f}m"
+                lines.append(f"Method: {node.get('method', 'N/A')}")
+                lines.append(f"Budget: £{node.get('budget', 0) / 1e6:.2f}m")
+
+            title = "\n".join(lines)
 
             net.add_node(
                 node["id"],
