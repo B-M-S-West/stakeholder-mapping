@@ -4,6 +4,8 @@ data/raw/*
 explorer.db
 govmap.db
 govmap.kuzu
+govmap.kuzu.wal
+graph.html
 
 
 # Byte-compiled / optimized / DLL files

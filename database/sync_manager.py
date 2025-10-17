@@ -1,6 +1,5 @@
 from database.sqlite_manager import SQLiteManager
 from database.kuzu_manager import KuzuManager
-import pandas as pd
 from loguru import logger
 
 class SyncManager:
@@ -33,8 +32,8 @@ class SyncManager:
                 int(row['stakeholder_id']),
                 int(row['org_id']),
                 row['name'],
-                row['role'],
-                row['job_title'],
+                row.get('job_title'),
+                row.get('role'),
             )
 
     def sync_painpoint(self, painpoint_id: int):
@@ -47,8 +46,8 @@ class SyncManager:
                 int(row['painpoint_id']),
                 int(row['org_id']),
                 row['description'],
-                row['category'],
-                row['severity'],
+                row.get('severity'),
+                row.get('urgency'),
             )
         
     def sync_commercial(self, commercial_id: int):
@@ -97,8 +96,8 @@ class SyncManager:
                 int(row['stakeholder_id']),
                 int(row['org_id']),
                 row['name'],
-                row['role'],
-                row['job_title'],
+                row.get('job_title'),
+                row.get('role'),
             )
         
         # Sync Painpoints
@@ -109,8 +108,8 @@ class SyncManager:
                 int(row['painpoint_id']),
                 int(row['org_id']),
                 row['description'],
-                row['category'],
-                row['severity'],
+                row.get('severity'),
+                row.get('urgency'),
             )
         
         # Sync Commercials

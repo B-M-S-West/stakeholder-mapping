@@ -106,11 +106,11 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             elif table_type == "PainPoint":
                                 for _, row in df.iterrows():
                                     success = sqlite_mgr.insert_painpoint(
-                                        int(row['painpoint_id']),
-                                        int(row['org_id']),
-                                        row['description'],
-                                        row['urgency'],
-                                        row['severity'],
+                                        int(row.get('painpoint_id')),
+                                        int(row.get('org_id')),
+                                        row.get('description'),
+                                        row.get('severity'),
+                                        row.get('urgency'),
                                     )
                                     if success:
                                         success_count += 1

@@ -1,9 +1,4 @@
-import dis
-from email.policy import default
-from os import sync
-import select
 import streamlit as st
-import pandas as pd
 from database.sqlite_manager import SQLiteManager
 from database.sync_manager import SyncManager
 import config
@@ -24,7 +19,7 @@ def render_crud_interface(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
     elif entity_type == "Stakeholders":
         render_stakeholder_crud(sqlite_mgr, sync_mgr)
     elif entity_type == "Pain Points":
-        render_pain_point_crud(sqlite_mgr, sync_mgr)
+        render_painpoint_crud(sqlite_mgr, sync_mgr)
     elif entity_type == "Commercial":
         render_commercial_crud(sqlite_mgr, sync_mgr)
     elif entity_type == "Relationships":
@@ -68,7 +63,7 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     filtered_df['org_name'].str.contains(search_term, case=False, na=False)
                     ]
                 
-                st.dataFrame(
+                st.dataframe(
                     filtered_df,
                     use_container_width=True,
                     hide_index=True
@@ -90,7 +85,7 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             st.write("### Add New Organisation")
 
             # Auto-generate next ID
-            next_id = sqlite_mgr.get_next_id("organisations", "org_id")
+            next_id = sqlite_mgr.get_next_id("Organisation", "org_id")
             org_id = st.number_input(
                 "Organisation ID",
                 min_value=1,
@@ -274,7 +269,7 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     filtered_df['name'].str.contains(search_term, case=False, na=False)
                 ]
 
-            st.dataFrame(
+            st.dataframe(
                 filtered_df,
                 use_container_width=True,
                 hide_index=True
@@ -473,7 +468,7 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             if org_filter:
                 filtered_df = filtered_df[filtered_df['org_name'].isin(org_filter)]
 
-            st.dataFrame(
+            st.dataframe(
                 filtered_df,
                 use_container_width=True,
                 hide_index=True
@@ -624,7 +619,7 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.success(f"✅ Deleted pain point")
 
                         if sync_to_kuzu:
-                            sync_mgr.delete_painpoint_from_graph(painpoint_id)
+                            sync_mgr.delete_painpoint(painpoint_id)
                             st.success("✅ Deleted from graph database")
 
                         st.rerun()

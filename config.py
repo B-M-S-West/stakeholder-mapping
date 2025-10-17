@@ -23,7 +23,7 @@ TABLES = {
     "Stakeholder": ["stakeholder_id", "org_id", "name", "job_title", "role"],
     "PainPoint": ["painpoint_id", "org_id", "description", "severity", "urgency"],
     "Commercial": ["commercial_id", "org_id", "method", "budget"],
-    "OrgRelationships": ["from_org_id", "to_org_id", "relationship_type"],
+    "OrgRelationship": ["from_org_id", "to_org_id", "relationship_type"],
 }
 
 # Organization types (canonical lowercase)

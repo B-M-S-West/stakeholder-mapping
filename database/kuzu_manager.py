@@ -1,5 +1,3 @@
-from math import e
-import re
 import kuzu
 from pathlib import Path
 from typing import List, Dict, Any
@@ -48,10 +46,22 @@ class KuzuManager:
                 )
             """)
 
+            # PainPoint node table (was missing which caused binder errors when creating rels)
+            self.conn.execute("""
+                CREATE NODE TABLE IF NOT EXISTS PainPoint (
+                    painpoint_id INT64,
+                    org_id INT64,
+                    description STRING,
+                    severity STRING,
+                    urgency STRING,
+                    PRIMARY KEY (painpoint_id)
+                )
+            """)
+
             # Relationships
             self.conn.execute("""
                 CREATE REL TABLE IF NOT EXISTS OrgRelation (
-                    FROM Organisation TO Organisation
+                    FROM Organisation TO Organisation,
                     relationship_type STRING
                 )
             """)
