@@ -4,7 +4,7 @@ from pyvis.network import Network
 from database.kuzu_manager import KuzuManager
 import config
 from utils import validators
-from ui.graph_utils import get_base_html_from_network
+from ui.graph_utils import get_base_html_from_network, inject_custom_js, get_delete_node_js
 
 
 def render_graph_explorer(kuzu_mgr: KuzuManager):
@@ -215,6 +215,10 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
 
         # Generate HTML in memory
         html_content = get_base_html_from_network(net)
+
+        # Inject delete functionality
+        delete_js = get_delete_node_js()
+        html_content = inject_custom_js(html_content, delete_js)
 
         # Display in Streamlit
         components.html(html_content, height=750)

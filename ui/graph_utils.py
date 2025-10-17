@@ -57,3 +57,102 @@ def inject_custom_js(html_content, js_code):
     else:
         # Fallback: append at end
         return html_content + js_wrapped
+    
+def get_delete_node_js():
+    """
+    Returns JavaScript code that enables right-click to delete nodes.
+    Deletion is visual only (client-side).
+    """
+    return """
+    // Wait for network to be ready
+    (function() {
+        function initDeleteFeature() {
+            try {
+                // PyVis exposes the network as a global variable
+                var network = window.network;
+                if (!network) {
+                    console.warn('Network not found, retrying...');
+                    setTimeout(initDeleteFeature, 100);
+                    return;
+                }
+                
+                console.log('Delete feature initialized');
+                
+                // Track deleted nodes for potential undo feature
+                window.deletedNodes = window.deletedNodes || [];
+                
+                // Right-click handler
+                network.on('oncontext', function(params) {
+                    // Prevent browser context menu
+                    if (params.event && params.event.srcEvent) {
+                        params.event.srcEvent.preventDefault();
+                    }
+                    
+                    // Get node at click position
+                    var nodeId = network.getNodeAt(params.pointer.DOM);
+                    
+                    if (nodeId !== undefined && nodeId !== null) {
+                        console.log('Deleting node:', nodeId);
+                        
+                        // Get references to data stores
+                        var nodesDS = network.body.data.nodes;
+                        var edgesDS = network.body.data.edges;
+                        
+                        // Store node data before deletion (for potential undo)
+                        var nodeData = nodesDS.get(nodeId);
+                        var connectedEdges = network.getConnectedEdges(nodeId);
+                        var edgeData = edgesDS.get(connectedEdges);
+                        
+                        window.deletedNodes.push({
+                            node: nodeData,
+                            edges: edgeData
+                        });
+                        
+                        // Remove node (this automatically removes connected edges in Vis.js)
+                        nodesDS.remove({id: nodeId});
+                        
+                        // Explicitly remove edges to be safe
+                        if (connectedEdges && connectedEdges.length > 0) {
+                            edgesDS.remove(connectedEdges);
+                        }
+                        
+                        console.log('Node deleted successfully');
+                    }
+                });
+                
+                // Add visual hint
+                addHint('Right-click a node to remove it from view');
+                
+            } catch(e) {
+                console.error('Error initializing delete feature:', e);
+            }
+        }
+        
+        function addHint(text) {
+            var hint = document.createElement('div');
+            hint.id = 'graph-hint';
+            hint.style.cssText = `
+                position: absolute;
+                right: 12px;
+                bottom: 12px;
+                padding: 8px 12px;
+                background: rgba(0, 0, 0, 0.75);
+                color: #fff;
+                font: 12px/1.4 -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+                border-radius: 6px;
+                z-index: 9999;
+                pointer-events: none;
+                box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+            `;
+            hint.textContent = text;
+            document.body.appendChild(hint);
+        }
+        
+        // Start initialization when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initDeleteFeature);
+        } else {
+            initDeleteFeature();
+        }
+    })();
+    """
