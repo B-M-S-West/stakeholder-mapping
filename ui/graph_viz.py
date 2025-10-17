@@ -4,6 +4,7 @@ from pyvis.network import Network
 from database.kuzu_manager import KuzuManager
 import config
 from utils import validators
+from ui.graph_utils import get_base_html_from_network
 
 
 def render_graph_explorer(kuzu_mgr: KuzuManager):
@@ -212,12 +213,8 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
                 arrows="to",
             )
 
-        # Generate and display graph
-        net.save_graph("graph.html")
-
-        # Read the HTML file
-        with open("graph.html", "r", encoding="utf-8") as f:
-            html_content = f.read()
+        # Generate HTML in memory
+        html_content = get_base_html_from_network(net)
 
         # Display in Streamlit
         components.html(html_content, height=750)
