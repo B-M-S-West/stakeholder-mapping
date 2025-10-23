@@ -17,28 +17,31 @@ Top-level components:
 
 Architecture diagram
 flowchart TD
-    subgraph UI["Streamlit Application"]
-        SB[Sidebar Navigation]
-        MA[Main Area - dynamic by selection]
+    
+     subgraph UI
+          direction TB
+          T1[Streamlit Application]
+          SB[Sidebar Navigation]
+          MA[Main Area - dynamic by selection]
 
-        SB -->|📊| DB[Dashboard]
-        SB -->|📝| CRUD[Data Management - CRUD]
-        SB -->|📁| IO[Import / Export CSV]
-        SB -->|🕸️| GX[Graph Explorer]
-        SB -->|📈| AN[Analytics]
-    end
+          SB -->|📊| DB[Dashboard]
+          SB -->|📝| CRUD[Data Management - CRUD]
+          SB -->|📁| IO[Import / Export CSV]
+          SB -->|🕸️| GX[Graph Explorer]
+          SB -->|📈| AN[Analytics]
+     end
 
-    SQLDB[(SQLite DB - govmap.db)]
-    KZDB[(Kuzu DB - govmap_kuzu/)]
+     SQLDB[(SQLite DB - govmap.db)]
+     KZDB[(Kuzu DB - govmap_kuzu/)]
 
-    UI -->|Create / Read / Update / Delete| SQLDB
-    UI -->|Graph queries| KZDB
+     UI -->|Create / Read / Update / Delete| SQLDB
+     UI -->|Graph queries| KZDB
 
-    subgraph SYNC["Sync Layer - on insert / update / delete"]
-    end
+     subgraph SYNC["Sync Layer - on insert / update / delete"]
+     end
 
-    SQLDB <-.->|sync| SYNC
-    KZDB <-.->|sync| SYNC
+     SQLDB <-.->|sync| SYNC
+     KZDB <-.->|sync| SYNC
 
 ## Files you should know
 
