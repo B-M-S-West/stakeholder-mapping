@@ -19,19 +19,22 @@ Architecture diagram
 flowchart TD
     subgraph UI["Streamlit Application"]
         SB[Sidebar Navigation]
-        MA[Main Area (dynamic based on selection)]
+        MA[Main Area - dynamic by selection]
 
         SB -->|📊| DB[Dashboard]
-        SB -->|📝| CRUD[Data Management (CRUD)]
+        SB -->|📝| CRUD[Data Management - CRUD]
         SB -->|📁| IO[Import / Export CSV]
         SB -->|🕸️| GX[Graph Explorer]
         SB -->|📈| AN[Analytics]
     end
 
-    UI -->|Create/Read/Update/Delete| SQLDB[(SQLite DB<br/>(govmap.db))]
-    UI -->|Graph Queries| KZDB[(Kuzu DB<br/>(govmap_kuzu/))]
+    SQLDB[(SQLite DB - govmap.db)]
+    KZDB[(Kuzu DB - govmap_kuzu/)]
 
-    subgraph SYNC["Sync Layer (on insert/update/delete)"]
+    UI -->|Create / Read / Update / Delete| SQLDB
+    UI -->|Graph queries| KZDB
+
+    subgraph SYNC["Sync Layer - on insert / update / delete"]
     end
 
     SQLDB <-.->|sync| SYNC
