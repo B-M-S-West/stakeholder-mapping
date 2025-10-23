@@ -16,6 +16,8 @@ Top-level components:
 - `data/` — folder for storing exported csv files and some test data
 
 Architecture diagram
+
+```mermaid
 flowchart TD
     
      subgraph UI
@@ -42,6 +44,7 @@ flowchart TD
 
      SQLDB <-.->|sync| SYNC
      KZDB <-.->|sync| SYNC
+```
 
 ## Files you should know
 
