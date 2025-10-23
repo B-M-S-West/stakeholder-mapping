@@ -16,27 +16,26 @@ Top-level components:
 - `data/` — folder for storing exported csv files and some test data
 
 Architecture diagram
-┌─────────────────────────────────────────────────────────┐
-│                  Streamlit Application                  │
-├─────────────────────────────────────────────────────────┤
-│  Sidebar Navigation:                                    │
-│  ├─ 📊 Dashboard                                        │
-│  ├─ 📝 Data Management (CRUD)                           │
-│  ├─ 📁 Import/Export CSV                                │
-│  ├─ 🕸️  Graph Explorer                                  │
-│  └─ 📈 Analytics                                        │
-├─────────────────────────────────────────────────────────┤
-│  Main Area (dynamic based on selection)                │
-└─────────────────────────────────────────────────────────┘
-         ↓                              ↓
-    SQLite DB                       Kuzu DB
-   (govmap.db)                   (govmap_kuzu/)
-   - CRUD operations              - Graph queries
-   - Table views                  - Relationship traversal
-   - Data validation              - Path finding
-         ↓                              ↑
-         └──────── Sync Layer ──────────┘
-              (on insert/update/delete)
+flowchart TD
+    subgraph UI["Streamlit Application"]
+        SB[Sidebar Navigation]
+        MA[Main Area (dynamic based on selection)]
+
+        SB -->|📊| DB[Dashboard]
+        SB -->|📝| CRUD[Data Management (CRUD)]
+        SB -->|📁| IO[Import / Export CSV]
+        SB -->|🕸️| GX[Graph Explorer]
+        SB -->|📈| AN[Analytics]
+    end
+
+    UI -->|Create/Read/Update/Delete| SQLDB[(SQLite DB<br/>(govmap.db))]
+    UI -->|Graph Queries| KZDB[(Kuzu DB<br/>(govmap_kuzu/))]
+
+    subgraph SYNC["Sync Layer (on insert/update/delete)"]
+    end
+
+    SQLDB <-.->|sync| SYNC
+    KZDB <-.->|sync| SYNC
 
 ## Files you should know
 
