@@ -224,7 +224,7 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.success(f"✅ Deleted organisation: {org_data['org_name']}")
 
                         if sync_to_kuzu:
-                            sync_mgr.delete_organisation_from_graph(org_id)
+                            sync_mgr.delete_organisation(org_id)
                             st.success("✅ Deleted from graph database")
 
                         st.rerun()
@@ -415,7 +415,7 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.success(f"✅ Deleted stakeholder: {stakeholder_data['name']}")
 
                         if sync_to_kuzu:
-                            sync_mgr.delete_stakeholder_from_graph(stakeholder_id)
+                            sync_mgr.delete_stakeholder(stakeholder_id)
                             st.success("✅ Deleted from graph database")
 
                         st.rerun()
@@ -809,7 +809,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         st.success(f"✅ Deleted commercial entry")
 
                         if sync_to_kuzu:
-                            sync_mgr.delete_commercial_from_graph(commercial_id)
+                            sync_mgr.delete_commercial(commercial_id)
                             st.success("✅ Deleted from graph database")
 
                         st.rerun()
