@@ -16,6 +16,7 @@ class SQLiteManager:
         if self.conn is None:
             self.conn = sqlite3.connect(self.db_path, check_same_thread=False)
             self.conn.row_factory = sqlite3.Row # Return rows as dictionaries
+            self.conn.execute("PRAGMA foreign_keys = ON")  # Enable foreign key constraints to allow ON DELETE CASCADE to work
         return self.conn
     
     def init_database(self):

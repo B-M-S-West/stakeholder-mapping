@@ -671,7 +671,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             display_df = filtered_df.copy()
             display_df['budget'] = display_df['budget'].apply(lambda x: f"£{x/1e6:.2f}m")
 
-            st.dataFrame(
+            st.dataframe(
                 display_df,
                 use_container_width=True,
                 hide_index=True
@@ -914,7 +914,7 @@ def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         from_org_id = org_id_map[from_org]
                         to_org_id = org_id_map[to_org]
 
-                        success = sqlite_mgr.insert_relationship(
+                        success = sqlite_mgr.insert_org_relationship(
                             from_org_id, to_org_id, relationship_type
                         )
 
@@ -971,13 +971,13 @@ def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 if st.button(
                     "🗑️ Delete Relationship", type="primary", disabled=not confirm
                 ):
-                    success = sqlite_mgr.delete_relationship(rel_id)
+                    success = sqlite_mgr.delete_org_relationship(rel_id)
 
                     if success:
                         st.success(f"✅ Deleted relationship")
 
                         if sync_to_kuzu:
-                            sync_mgr.delete_relationship_from_kuzu(
+                            sync_mgr.delete_relationship(
                                 from_org_id, to_org_id, rel_type
                             )
                             st.success("✅ Deleted from graph database")
