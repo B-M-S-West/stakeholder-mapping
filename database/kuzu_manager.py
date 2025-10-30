@@ -389,26 +389,288 @@ class KuzuManager:
         return {'nodes': nodes, 'edges': edges}
     
     def get_organisation_neighborhood(self, org_id: int, depth: int = 1) -> Dict[str, List]:
-        """Get neighbourhood of an organisation up to a certain depth."""
-        # Get nodes and edges using variable length relationships
-        query = f"""
-            MATCH path = (o:Organisation {{org_id: $org_id}})-[*1..{depth}]-(connected)
-            RETURN path
-        """
-        result = self.conn.execute(query, {'org_id': org_id})
-        # Process and return nodes/edges from paths
-        # Implementation depends on your needs
-        pass
+        """Get neighbourhood of an organisation up to a certain depth.
 
-    def find_shortest_path(self, from_org_id: int, to_org_id: int) -> List[Dict]:
-        """Find shortest path between two organisations."""
-        query = """
-            MATCH path = shortestPath((a:Organisation {org_id: $from_org_id})-[*]-(b:Organisation {org_id: $to_org_id}))
-            RETURN path
+        Returns dict with 'nodes' and 'edges' lists compatible with get_graph_data().
+        - depth: number of org-to-org hops to traverse (>=1).
         """
-        result = self.conn.execute(query, {
-            'from_org_id': from_org_id,
-            'to_org_id': to_org_id
-        })
-        # Process and return path
-        pass
+        try:
+            # BFS expansion over OrgRelation to collect organisation IDs within depth
+            org_ids = {int(org_id)}
+            frontier = {int(org_id)}
+
+            for _ in range(max(1, int(depth))):
+                if not frontier:
+                    break
+                frontier_list = ", ".join(str(i) for i in frontier)
+                query = f"""
+                    MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+                    WHERE a.org_id IN [{frontier_list}] OR b.org_id IN [{frontier_list}]
+                    RETURN a.org_id, b.org_id, r.relationship_type
+                """
+                df_rels = self.conn.execute(query).get_as_df()
+                new_frontier = set()
+                for _, row in df_rels.iterrows():
+                    a_id = int(row["a.org_id"])
+                    b_id = int(row["b.org_id"])
+                    if a_id not in org_ids:
+                        new_frontier.add(a_id)
+                    if b_id not in org_ids:
+                        new_frontier.add(b_id)
+                    org_ids.add(a_id)
+                    org_ids.add(b_id)
+                frontier = new_frontier
+
+            # Build nodes list: organisations in org_ids
+            org_ids_list = sorted(list(org_ids))
+            org_ids_str = ", ".join(str(i) for i in org_ids_list)
+            nodes = []
+            edges = []
+
+            # Organisations
+            orgs_q = f"""
+                MATCH (o:Organisation)
+                WHERE o.org_id IN [{org_ids_str}]
+                RETURN o.org_id, o.org_name, o.org_type, o.org_function
+            """
+            orgs_df = self.conn.execute(orgs_q).get_as_df()
+            for _, row in orgs_df.iterrows():
+                nodes.append({
+                    "id": f"org{row['o.org_id']}",
+                    "label": row["o.org_name"],
+                    "type": "organisation",
+                    "org_type": validators.normalize_org_type(row["o.org_type"]),
+                    "function": row.get("o.org_function")
+                })
+
+            # OrgRelation edges between organisations in set
+            rels_q = f"""
+                MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+                WHERE a.org_id IN [{org_ids_str}] AND b.org_id IN [{org_ids_str}]
+                RETURN a.org_id, b.org_id, r.relationship_type
+            """
+            rels_df = self.conn.execute(rels_q).get_as_df()
+            for _, row in rels_df.iterrows():
+                edges.append({
+                    "from": f"org{row['a.org_id']}",
+                    "to": f"org{row['b.org_id']}",
+                    "label": validators.normalize_relationship_type(row["r.relationship_type"]),
+                    "type": "org_relation"
+                })
+
+            # Stakeholders directly attached to any org in set
+            st_q = f"""
+                MATCH (o:Organisation)-[:HasStakeholder]->(s:Stakeholder)
+                WHERE o.org_id IN [{org_ids_str}]
+                RETURN s.stakeholder_id, o.org_id, s.name, s.job_title, s.role
+            """
+            st_df = self.conn.execute(st_q).get_as_df()
+            for _, row in st_df.iterrows():
+                nodes.append({
+                    "id": f"st{row['s.stakeholder_id']}",
+                    "label": row["s.name"],
+                    "type": "stakeholder",
+                    "job_title": row.get("s.job_title"),
+                    "role": row.get("s.role")
+                })
+                edges.append({
+                    "from": f"org{row['o.org_id']}",
+                    "to": f"st{row['s.stakeholder_id']}",
+                    "label": "has_stakeholder",
+                    "type": "has_stakeholder"
+                })
+
+            # PainPoints directly attached
+            pp_q = f"""
+                MATCH (o:Organisation)-[:HasPainPoint]->(p:PainPoint)
+                WHERE o.org_id IN [{org_ids_str}]
+                RETURN p.painpoint_id, o.org_id, p.description, p.severity, p.urgency
+            """
+            pp_df = self.conn.execute(pp_q).get_as_df()
+            for _, row in pp_df.iterrows():
+                desc = row.get("p.description") or ""
+                label = desc[:50] + "..." if len(desc) > 50 else desc
+                nodes.append({
+                    "id": f"pp{row['p.painpoint_id']}",
+                    "label": label,
+                    "type": "painpoint",
+                    "severity": row.get("p.severity"),
+                    "urgency": row.get("p.urgency")
+                })
+                edges.append({
+                    "from": f"org{row['o.org_id']}",
+                    "to": f"pp{row['p.painpoint_id']}",
+                    "label": "has_painpoint",
+                    "type": "has_painpoint"
+                })
+
+            # Commercials directly attached
+            com_q = f"""
+                MATCH (o:Organisation)-[:ProcuresThrough]->(c:Commercial)
+                WHERE o.org_id IN [{org_ids_str}]
+                RETURN c.commercial_id, o.org_id, c.method, c.budget
+            """
+            com_df = self.conn.execute(com_q).get_as_df()
+            for _, row in com_df.iterrows():
+                method = row.get("c.method") or ""
+                budget = validators.parse_budget(row.get("c.budget"))
+                nodes.append({
+                    "id": f"com{row['c.commercial_id']}",
+                    "label": f"{method} (£{(budget or 0)/1e6:.1f}m)",
+                    "type": "commercial",
+                    "method": method,
+                    "budget": budget
+                })
+                edges.append({
+                    "from": f"org{row['o.org_id']}",
+                    "to": f"com{row['c.commercial_id']}",
+                    "label": "procures_through",
+                    "type": "procures_through"
+                })
+
+            return {"nodes": nodes, "edges": edges}
+
+        except Exception as e:
+            print(f"Error getting organisation neighbourhood: {e}")
+            return {"nodes": [], "edges": []}
+
+    def find_shortest_path(self, from_org_id: int, to_org_id: int, max_depth: int = 6) -> Dict[str, List]:
+        """Find shortest path between two organisations using BFS over OrgRelation.
+
+        Returns dict with 'nodes' and 'edges' describing the organisation path (organisations + org_relation edges).
+        max_depth limits search depth (number of hops).
+        """
+        try:
+            if from_org_id == to_org_id:
+                # return the single node
+                q = f"""
+                    MATCH (o:Organisation {{org_id: $org_id}})
+                    RETURN o.org_id, o.org_name, o.org_type, o.org_function
+                """
+                df = self.conn.execute(q, {"org_id": from_org_id}).get_as_df()
+                nodes = []
+                for _, row in df.iterrows():
+                    nodes.append({
+                        "id": f"org{row['o.org_id']}",
+                        "label": row["o.org_name"],
+                        "type": "organisation",
+                        "org_type": validators.normalize_org_type(row["o.org_type"]),
+                        "function": row.get("o.org_function")
+                    })
+                return {"nodes": nodes, "edges": []}
+
+            # BFS over org relations (undirected traversal)
+            visited = {int(from_org_id)}
+            parent = {}  # child_id -> (parent_id, relationship_type, direction)
+            frontier = {int(from_org_id)}
+            found = False
+            depth = 0
+
+            while frontier and depth < max_depth and not found:
+                frontier_list = ", ".join(str(i) for i in frontier)
+                query = f"""
+                    MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+                    WHERE a.org_id IN [{frontier_list}] OR b.org_id IN [{frontier_list}]
+                    RETURN a.org_id, b.org_id, r.relationship_type
+                """
+                df = self.conn.execute(query).get_as_df()
+                next_frontier = set()
+
+                for _, row in df.iterrows():
+                    a_id = int(row["a.org_id"])
+                    b_id = int(row["b.org_id"])
+                    rel_type = row["r.relationship_type"]
+
+                    # a -> b
+                    if a_id in frontier and b_id not in visited:
+                        parent[b_id] = (a_id, rel_type, "out")
+                        if b_id == to_org_id:
+                            found = True
+                            break
+                        visited.add(b_id)
+                        next_frontier.add(b_id)
+
+                    # b -> a (reverse direction)
+                    if b_id in frontier and a_id not in visited:
+                        parent[a_id] = (b_id, rel_type, "in")
+                        if a_id == to_org_id:
+                            found = True
+                            break
+                        visited.add(a_id)
+                        next_frontier.add(a_id)
+
+                frontier = next_frontier
+                depth += 1
+
+            if not found:
+                return {"nodes": [], "edges": []}
+
+            # Reconstruct path from to_org_id -> from_org_id
+            path_orgs = []
+            cur = int(to_org_id)
+            while True:
+                path_orgs.append(cur)
+                if cur == int(from_org_id):
+                    break
+                cur_parent = parent.get(cur)
+                if not cur_parent:
+                    break
+                cur = cur_parent[0]
+            path_orgs = list(reversed(path_orgs))  # from -> to
+
+            # Fetch organisation node details
+            org_ids_str = ", ".join(str(i) for i in path_orgs)
+            orgs_q = f"""
+                MATCH (o:Organisation)
+                WHERE o.org_id IN [{org_ids_str}]
+                RETURN o.org_id, o.org_name, o.org_type, o.org_function
+            """
+            orgs_df = self.conn.execute(orgs_q).get_as_df()
+            nodes = []
+            org_meta = {}
+            for _, row in orgs_df.iterrows():
+                oid = int(row["o.org_id"])
+                meta = {
+                    "id": f"org{oid}",
+                    "label": row["o.org_name"],
+                    "type": "organisation",
+                    "org_type": validators.normalize_org_type(row["o.org_type"]),
+                    "function": row.get("o.org_function")
+                }
+                nodes.append(meta)
+                org_meta[oid] = meta
+
+            # Build edges following the path sequence
+            edges = []
+            for i in range(len(path_orgs) - 1):
+                a = path_orgs[i]
+                b = path_orgs[i + 1]
+                # get relationship type between a and b (could be either direction)
+                rel_q = f"""
+                    MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+                    WHERE a.org_id = {a} AND b.org_id = {b}
+                    RETURN r.relationship_type
+                """
+                rel_df = self.conn.execute(rel_q).get_as_df()
+                if rel_df.empty:
+                    # try reverse direction
+                    rel_q = f"""
+                        MATCH (a:Organisation)-[r:OrgRelation]->(b:Organisation)
+                        WHERE a.org_id = {b} AND b.org_id = {a}
+                        RETURN r.relationship_type
+                    """
+                    rel_df = self.conn.execute(rel_q).get_as_df()
+
+                rel_type = rel_df.iloc[0]["r.relationship_type"] if not rel_df.empty else "org_relation"
+                edges.append({
+                    "from": f"org{a}",
+                    "to": f"org{b}",
+                    "label": validators.normalize_relationship_type(rel_type),
+                    "type": "org_relation"
+                })
+
+            return {"nodes": nodes, "edges": edges}
+
+        except Exception as e:
+            print(f"Error finding shortest path: {e}")
+            return {"nodes": [], "edges": []}
