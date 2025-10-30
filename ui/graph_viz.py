@@ -2,12 +2,13 @@ import streamlit as st
 import streamlit.components.v1 as components
 from pyvis.network import Network
 from database.kuzu_manager import KuzuManager
+from database.sqlite_manager import SQLiteManager
 import config
 from utils import validators
 from ui.graph_utils import get_base_html_from_network, inject_custom_js, get_delete_node_js
 
 
-def render_graph_explorer(kuzu_mgr: KuzuManager):
+def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
     """Render interactive graph visualization"""
 
     st.header("🕸️ Graph Explorer")
@@ -50,9 +51,44 @@ def render_graph_explorer(kuzu_mgr: KuzuManager):
         if st.button("🔄 Refresh Graph", width='stretch'):
             st.rerun()
 
-    # Get graph data from Kuzu
+        # -- Neighbourhood explorer --
+        st.markdown("---")
+        st.subheader("Explore by Organisation")
+        # get org list from SQLite (searchable selectbox)
+        try:
+            orgs_df = sqlite_mgr.get_all_organisations()
+            org_names = orgs_df['org_name'].tolist()
+        except Exception:
+            org_names = []
+
+        selected_org = st.selectbox("Start Organisation (searchable)", options=org_names)
+        depth = st.selectbox("Depth (org hops)", options=[0, 1, 2, 3, 4], index=1)
+
+        if st.button("🔎 Explore Neighbourhood", key="explore_neighborhood"):
+            if selected_org:
+                # Map name -> id via sqlite
+                org_row = orgs_df[orgs_df['org_name'] == selected_org]
+                if not org_row.empty:
+                    org_id = int(org_row.iloc[0]['org_id'])
+                    st.session_state['neighborhood_query'] = {'org_id': org_id, 'depth': int(depth)}
+                    # rerun so main area will pick up session state and render the neighbourhood
+                    st.rerun()
+                else:
+                    st.error("Selected organisation not found in local DB.")
+
+        if st.button("❌ Clear neighbourhood view", key="clear_neighborhood"):
+            st.session_state.pop('neighborhood_query', None)
+            st.rerun()
+
+    # If user requested a neighbourhood query (via sidebar) use that dataset;
+    # otherwise fall back to global graph data.
     try:
-        graph_data = kuzu_mgr.get_graph_data(relationship_filters)
+        if st.session_state.get('neighborhood_query'):
+            q = st.session_state['neighborhood_query']
+            graph_data = kuzu_mgr.get_organisation_neighborhood(q['org_id'], q['depth'])
+        else:
+            graph_data = kuzu_mgr.get_graph_data(relationship_filters)
+
         nodes = graph_data["nodes"]
         edges = graph_data["edges"]
 

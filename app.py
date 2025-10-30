@@ -165,7 +165,8 @@ elif page == "📝 Data Management":
     render_crud_interface(sqlite_mgr, sync_mgr)
 
 elif page == "🕸️ Graph Explorer":
-    render_graph_explorer(kuzu_mgr)
+    # pass sqlite manager so graph explorer can map org name → id for neighborhood searches
+    render_graph_explorer(kuzu_mgr, sqlite_mgr)
 
 elif page == "📁 Import/Export":
     render_import_export(sqlite_mgr, sync_mgr)
