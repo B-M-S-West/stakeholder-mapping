@@ -114,7 +114,9 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
             col1, col2 = st.columns(2)
             with col1:
-                submit = st.form_submit_button("Add Organisation", type="primary", use_container_width=True)
+                submit = st.form_submit_button(
+                    "Add Organisation", type="primary", width="stretch"
+                )
             with col2:
                 sync_to_kuzu = st.checkbox("Sync to graph", value=True)
             
@@ -166,7 +168,9 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                     col1, col2 = st.columns(2)
                     with col1:
-                        submit = st.form_submit_button("Update Organisation", type="primary", use_container_width=True)
+                        submit = st.form_submit_button(
+                            "Update Organisation", type="primary", width="stretch"
+                        )
                     with col2:
                         sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
@@ -269,11 +273,7 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     filtered_df['name'].str.contains(search_term, case=False, na=False)
                 ]
 
-            st.dataframe(
-                filtered_df,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.dataframe(filtered_df, width="stretch", hide_index=True)
 
     # Add new
     with tab2:
@@ -305,7 +305,7 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                 col1, col2 = st.columns(2)
                 with col1:
-                    submit = st.form_submit_button("Add Stakeholder", type="primary", use_container_width=True)
+                    submit = st.form_submit_button("Add Stakeholder", type="primary", width="stretch")
                 with col2:
                     sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
@@ -359,7 +359,7 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                     col1, col2 = st.columns(2)
                     with col1:
-                        submit = st.form_submit_button("Update Stakeholder", type="primary", use_container_width=True)
+                        submit = st.form_submit_button("Update Stakeholder", type="primary", width="stretch")
                     with col2:
                         sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
@@ -468,11 +468,7 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             if org_filter:
                 filtered_df = filtered_df[filtered_df['org_name'].isin(org_filter)]
 
-            st.dataframe(
-                filtered_df,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.dataframe(filtered_df, width="stretch", hide_index=True)
 
     # Add new
     with tab2:
@@ -504,7 +500,7 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                 col1, col2 = st.columns(2)
                 with col1:
-                    submit = st.form_submit_button("Add Pain Point", type="primary", use_container_width=True)
+                    submit = st.form_submit_button("Add Pain Point", type="primary", width="stretch")
                 with col2:
                     sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
@@ -562,7 +558,7 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                     col1, col2 = st.columns(2)
                     with col1:
-                        submit = st.form_submit_button("Update Pain Point", type="primary", use_container_width=True)
+                        submit = st.form_submit_button("Update Pain Point", type="primary", width="stretch")
                     with col2:
                         sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
@@ -671,11 +667,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             display_df = filtered_df.copy()
             display_df['budget'] = display_df['budget'].apply(lambda x: f"£{x/1e6:.2f}m")
 
-            st.dataframe(
-                display_df,
-                use_container_width=True,
-                hide_index=True
-            )
+            st.dataframe(display_df, width="stretch", hide_index=True)
 
     # Add new
     with tab2:
@@ -706,7 +698,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                 col1, col2 = st.columns(2)
                 with col1:
-                    submit = st.form_submit_button("Add Commercial Entry", type="primary", use_container_width=True)
+                    submit = st.form_submit_button("Add Commercial Entry", type="primary", width="stretch")
                 with col2:
                     sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
@@ -756,7 +748,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                     col1, col2 = st.columns(2)
                     with col1:
-                        submit = st.form_submit_button("Update Commercial Entry", type="primary", use_container_width=True)
+                        submit = st.form_submit_button("Update Commercial Entry", type="primary", width="stretch")
                     with col2:
                         sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
@@ -857,7 +849,7 @@ def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 "To Organisation",
             ]
 
-            st.dataframe(display_df, use_container_width=True, hide_index=True)
+            st.dataframe(display_df, width="stretch", hide_index=True)
 
             # Relationship statistics
             st.write("### Relationship Statistics")
@@ -900,7 +892,7 @@ def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 col1, col2 = st.columns(2)
                 with col1:
                     submit = st.form_submit_button(
-                        "Add Relationship", type="primary", use_container_width=True
+                        "Add Relationship", type="primary", width="stretch"
                     )
                 with col2:
                     sync_to_kuzu = st.checkbox("Sync to graph", value=True)
