@@ -63,21 +63,21 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     filtered_df['org_name'].str.contains(search_term, case=False, na=False)
                     ]
                 
-                st.dataframe(
-                    filtered_df,
-                    width='stretch',
-                    hide_index=True
-                )
+            st.dataframe(
+                filtered_df,
+                width='stretch',
+                hide_index=True
+            )
 
-                # Export filtered data
-                if not filtered_df.empty:
-                    csv = filtered_df.to_csv(index=False)
-                    st.download_button(
-                        label="📥 Export Filtered Data",
-                        data=csv,
-                        file_name='filtered_organisations.csv',
-                        mime='text/csv'
-                    )
+            # Export filtered data
+            if not filtered_df.empty:
+                csv = filtered_df.to_csv(index=False)
+                st.download_button(
+                    label="📥 Export Filtered Data",
+                    data=csv,
+                    file_name='filtered_organisations.csv',
+                    mime='text/csv'
+                )
 
     # Add new
     with tab2:
