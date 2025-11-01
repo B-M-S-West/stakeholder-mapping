@@ -281,14 +281,14 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
             st.markdown("🔴 **Oversight** - Red arrow")
 
         # Node details panel
-        st.subheader("📊 Node Details")
+        st.subheader("📊 Organisation Details")
 
         # Create a searchable dropdown of all nodes
         node_options = {
             f"{node['label']} ({validators.normalize_node_type(node.get('type'))})": node for node in filtered_nodes
         }
         selected_node_label = st.selectbox(
-            "Select a node to view details", options=list(node_options.keys())
+            "Select an Organisation to view details", options=list(node_options.keys())
         )
 
         if selected_node_label:
