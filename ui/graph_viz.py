@@ -327,26 +327,67 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
                 ]
                 st.write(f"**Connections:** {len(connected_edges)}")
 
+                # Map nodes by id for quick lookup
+                nodes_by_id = {n["id"]: n for n in filtered_nodes}
+
+                # Collect connected node ids and categorize
+                connected_node_ids = set()
+                for e in connected_edges:
+                    connected_node_ids.add(e["from"])
+                    connected_node_ids.add(e["to"])
+                # Remove the selected node itself
+                connected_node_ids.discard(selected_node["id"])
+
+                # Build lists
+                connected_nodes = [nodes_by_id[nid] for nid in connected_node_ids if nid in nodes_by_id]
+                stakeholder_nodes = [n for n in connected_nodes if validators.normalize_node_type(n.get("type")) == "stakeholder"]
+                painpoint_nodes = [n for n in connected_nodes if validators.normalize_node_type(n.get("type")) == "painpoint"]
+
+                # Quick summary + truncated list (as before)
                 if connected_edges:
-                    st.write("**Connected to:**")
-                    for edge in connected_edges[:5]:  # Show first 5
+                    st.write("**Connected to (sample):**")
+                    shown = 0
+                    for edge in connected_edges:
+                        if shown >= 5:
+                            break
                         if edge["from"] == selected_node["id"]:
-                            target_node = next(
-                                (n for n in filtered_nodes if n["id"] == edge["to"]),
-                                None,
-                            )
+                            target_node = nodes_by_id.get(edge["to"])
                             if target_node:
                                 st.write(f"→ {target_node['label']} ({edge['label']})")
+                                shown += 1
                         else:
-                            source_node = next(
-                                (n for n in filtered_nodes if n["id"] == edge["from"]),
-                                None,
-                            )
+                            source_node = nodes_by_id.get(edge["from"])
                             if source_node:
                                 st.write(f"← {source_node['label']} ({edge['label']})")
+                                shown += 1
 
                     if len(connected_edges) > 5:
                         st.write(f"... and {len(connected_edges) - 5} more")
+
+            # Collapsible detailed lists so UI stays compact
+            if stakeholder_nodes:
+                with st.expander(f"👥 Connected Stakeholders ({len(stakeholder_nodes)})", expanded=False):
+                    # Prepare display rows
+                    rows = []
+                    for n in stakeholder_nodes:
+                        rows.append({
+                            "Name": n.get("label"),
+                            "Job Title": n.get("job_title", "N/A"),
+                            "Role": n.get("role", "N/A"),
+                        })
+                    st.table(rows)
+
+            if painpoint_nodes:
+                with st.expander(f"⚠️ Connected Pain Points ({len(painpoint_nodes)})", expanded=False):
+                    rows = []
+                    for n in painpoint_nodes:
+                        desc = n.get("label") or ""
+                        rows.append({
+                            "Description": desc,
+                            "Severity": n.get("severity", "N/A"),
+                            "Urgency": n.get("urgency", "N/A"),
+                        })
+                    st.table(rows)
 
     except Exception as e:
         st.error(f"Error loading graph: {e}")
