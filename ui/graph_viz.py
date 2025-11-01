@@ -365,8 +365,8 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
                         st.write(f"... and {len(connected_edges) - 5} more")
 
             # Collapsible detailed lists so UI stays compact
-            if stakeholder_nodes:
-                with st.expander(f"👥 Connected Stakeholders ({len(stakeholder_nodes)})", expanded=False):
+            with st.expander(f"👥 Connected Stakeholders ({len(stakeholder_nodes)})", expanded=False):
+                if stakeholder_nodes:
                     # Prepare display rows
                     rows = []
                     for n in stakeholder_nodes:
@@ -377,8 +377,8 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
                         })
                     st.table(rows)
 
-            if painpoint_nodes:
-                with st.expander(f"⚠️ Connected Pain Points ({len(painpoint_nodes)})", expanded=False):
+            with st.expander(f"⚠️ Connected Pain Points ({len(painpoint_nodes)})", expanded=False):
+                if painpoint_nodes:
                     rows = []
                     for n in painpoint_nodes:
                         desc = n.get("label") or ""
