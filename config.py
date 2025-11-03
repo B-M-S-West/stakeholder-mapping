@@ -21,9 +21,10 @@ LOG_DIR.mkdir(parents=True, exist_ok=True)
 TABLES = {
     "Organisation": ["org_id", "org_name", "org_type", "org_function"],
     "Stakeholder": ["stakeholder_id", "org_id", "name", "job_title", "role"],
-    "PainPoint": ["painpoint_id", "org_id", "description", "severity", "urgency"],
+    "PainPoint": ["painpoint_id", "description", "severity", "urgency"],
     "Commercial": ["commercial_id", "org_id", "method", "budget"],
     "OrgRelationship": ["from_org_id", "to_org_id", "relationship_type"],
+    "OrganisationPainPoint": ["org_id", "painpoint_id"],
 }
 
 # Organization types (canonical lowercase)
