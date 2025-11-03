@@ -50,11 +50,9 @@ class SQLiteManager:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS PainPoint (
                 painpoint_id INTEGER PRIMARY KEY,
-                org_id INTEGER NOT NULL,
                 description TEXT NOT NULL,
                 severity TEXT,
-                urgency TEXT,
-                FOREIGN KEY (org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE
+                urgency TEXT
             )
         """)
 
@@ -79,6 +77,18 @@ class SQLiteManager:
                 FOREIGN KEY (from_org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE,
                 FOREIGN KEY (to_org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE,
                 UNIQUE(from_org_id, to_org_id, relationship_type)
+            )
+        """)
+
+        # OrganisationPainPoints table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS OrganisationPainPoints (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                org_id INTEGER NOT NULL,
+                painpoint_id INTEGER NOT NULL,
+                FOREIGN KEY (org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE,
+                FOREIGN KEY (painpoint_id) REFERENCES PainPoint(painpoint_id) ON DELETE CASCADE,
+                UNIQUE(org_id, painpoint_id)
             )
         """)
 
