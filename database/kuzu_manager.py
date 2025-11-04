@@ -50,7 +50,6 @@ class KuzuManager:
             self.conn.execute("""
                 CREATE NODE TABLE IF NOT EXISTS PainPoint (
                     painpoint_id INT64,
-                    org_id INT64,
                     description STRING,
                     severity STRING,
                     urgency STRING,
@@ -147,7 +146,7 @@ class KuzuManager:
             'stakeholder_id': stakeholder_id
         })
 
-    def upsert_painpoint(self, painpoint_id: int, org_id: int, description: str, severity: str, urgency: str):
+    def upsert_painpoint(self, painpoint_id: int, description: str, severity: str, urgency: str):
         """Insert or update a pain point."""
         # Delete if exists
         self.conn.execute("""
@@ -159,26 +158,15 @@ class KuzuManager:
         self.conn.execute("""
             CREATE (p:PainPoint {
                 painpoint_id: $painpoint_id,
-                org_id: $org_id,
                 description: $description,
                 severity: $severity,
                 urgency: $urgency
             })
         """, {
             'painpoint_id': painpoint_id,
-            'org_id': org_id,
             'description': description,
             'severity': severity,
             'urgency': urgency
-        })
-
-        # Create relationship
-        self.conn.execute("""
-            MATCH (o:Organisation {org_id: $org_id}), (p:PainPoint {painpoint_id: $painpoint_id})
-            MERGE (o)-[:HasPainPoint]->(p)
-        """, {
-            'org_id': org_id,
-            'painpoint_id': painpoint_id
         })
 
     def upsert_commercial(self, commercial_id: int, org_id: int, method: str, budget: float):
@@ -234,6 +222,23 @@ class KuzuManager:
             'to_org_id': to_org_id,
             'relationship_type': relationship_type
         })
+
+    def sync_painpoint_assignment(self, org_id: int, painpoint_id: int):
+        """Create HasPainPoint relationship between organisation and pain point."""
+        self.conn.execute("""
+            MATCH (o:Organisation {org_id: $org_id}), (p:PainPoint {painpoint_id: $painpoint_id})
+            MERGE (o)-[:HasPainPoint]->(p)
+        """, {
+            'org_id': org_id,
+            'painpoint_id': painpoint_id
+        })
+
+    def clear_painpoint_assignments(self, painpoint_id: int):
+        """Remove all HasPainPoint relationships for a given pain point."""
+        self.conn.execute("""
+            MATCH (o:Organisation)-[r:HasPainPoint]->(p:PainPoint {painpoint_id: $painpoint_id})
+            DELETE r
+        """, {'painpoint_id': painpoint_id})
 
     def delete_organisation(self, org_id: int):
         """Delete an organisation and its related nodes."""

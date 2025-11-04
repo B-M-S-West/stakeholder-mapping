@@ -50,11 +50,9 @@ class SQLiteManager:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS PainPoint (
                 painpoint_id INTEGER PRIMARY KEY,
-                org_id INTEGER NOT NULL,
                 description TEXT NOT NULL,
                 severity TEXT,
-                urgency TEXT,
-                FOREIGN KEY (org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE
+                urgency TEXT
             )
         """)
 
@@ -79,6 +77,18 @@ class SQLiteManager:
                 FOREIGN KEY (from_org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE,
                 FOREIGN KEY (to_org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE,
                 UNIQUE(from_org_id, to_org_id, relationship_type)
+            )
+        """)
+
+        # OrganisationPainPoint table
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS OrganisationPainPoint (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                org_id INTEGER NOT NULL,
+                painpoint_id INTEGER NOT NULL,
+                FOREIGN KEY (org_id) REFERENCES Organisation(org_id) ON DELETE CASCADE,
+                FOREIGN KEY (painpoint_id) REFERENCES PainPoint(painpoint_id) ON DELETE CASCADE,
+                UNIQUE(org_id, painpoint_id)
             )
         """)
 
@@ -118,15 +128,15 @@ class SQLiteManager:
             print(f"Error inserting stakeholder: {e}")
             return False
         
-    def insert_painpoint(self, painpoint_id: int, org_id: int, description: str, severity: str, urgency: str) -> bool:
+    def insert_painpoint(self, painpoint_id: int, description: str, severity: str, urgency: str) -> bool:
         """Insert a new pain point."""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             cursor.execute("""
-                INSERT INTO PainPoint (painpoint_id, org_id, description, severity, urgency)
-                VALUES (?, ?, ?, ?, ?)
-            """, (painpoint_id, org_id, description, severity, urgency))
+                INSERT INTO PainPoint (painpoint_id, description, severity, urgency)
+                VALUES (?, ?, ?, ?)
+            """, (painpoint_id, description, severity, urgency))
             conn.commit()
             return True
         except sqlite3.IntegrityError as e:
@@ -187,10 +197,36 @@ class SQLiteManager:
         """Get all pain points with org names"""
         conn = self.get_connection()
         df = pd.read_sql_query("""
-            SELECT p.*, o.org_name
+            SELECT
+                p.*,
+                GROUP_CONCAT(o.org_name, ', ') AS org_names,
+                GROUP_CONCAT(o.org_id) AS org_ids
             FROM PainPoint p
-            LEFT JOIN Organisation o ON p.org_id = o.org_id
+            LEFT JOIN OrganisationPainPoint opp ON p.painpoint_id = opp.painpoint_id
+            LEFT JOIN Organisation o ON opp.org_id = o.org_id
+            GROUP BY p.painpoint_id
             ORDER BY p.severity DESC, p.urgency DESC
+        """, conn)
+        return df
+    
+    def get_painpoint_assignments(self, painpoint_id: int) -> List[int]:
+        """Get all organisation IDs assigned to a pain point."""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("""
+            SELECT org_id
+            FROM OrganisationPainPoint
+            WHERE painpoint_id = ?
+        """, (painpoint_id,))
+        rows = cursor.fetchall()
+        return [row['org_id'] for row in rows]
+    
+    def get_all_painpoint_assignments(self) -> pd.DataFrame:
+        """Get all pain point assignments with org names"""
+        conn = self.get_connection()
+        df = pd.read_sql_query("""
+            SELECT org_id, painpoint_id
+            FROM OrganisationPainPoint
         """, conn)
         return df
     
@@ -264,20 +300,39 @@ class SQLiteManager:
             print(f"Error updating stakeholder: {e}")
             return False
         
-    def update_painpoint(self, painpoint_id: int, org_id: int, description: str, severity: str, urgency: str) -> bool:
+    def update_painpoint(self, painpoint_id: int, description: str, severity: str, urgency: str) -> bool:
         """Update an existing pain point."""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             cursor.execute("""
                 UPDATE PainPoint
-                SET org_id = ?, description = ?, severity = ?, urgency = ?
+                SET description = ?, severity = ?, urgency = ?
                 WHERE painpoint_id = ?
-            """, (org_id, description, severity, urgency, painpoint_id))
+            """, (description, severity, urgency, painpoint_id))
             conn.commit()
             return cursor.rowcount > 0
         except sqlite3.IntegrityError as e:
             print(f"Error updating pain point: {e}")
+            return False
+        
+    def update_painpoint_assignments(self, painpoint_id: int, org_ids: List[int]) -> bool:
+        """Update the assignments of a pain point to organisations."""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            # Delete existing assignments
+            cursor.execute("DELETE FROM OrganisationPainPoint WHERE painpoint_id = ?", (painpoint_id,))
+            # Insert new assignments
+            for org_id in org_ids:
+                cursor.execute("""
+                    INSERT INTO OrganisationPainPoint (org_id, painpoint_id)
+                    VALUES (?, ?)
+                """, (org_id, painpoint_id))
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError as e:
+            print(f"Error updating pain point assignments: {e}")
             return False
         
     def update_commercial(self, commercial_id: int, org_id: int, method: str, budget: float) -> bool:   

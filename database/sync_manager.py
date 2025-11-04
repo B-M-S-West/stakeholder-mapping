@@ -1,6 +1,7 @@
 from database.sqlite_manager import SQLiteManager
 from database.kuzu_manager import KuzuManager
 from loguru import logger
+from typing import Dict, List, Optional
 
 class SyncManager:
     """Manages synchronization between SQLite and Kuzu databases."""
@@ -36,7 +37,7 @@ class SyncManager:
                 row.get('role'),
             )
 
-    def sync_painpoint(self, painpoint_id: int):
+    def sync_painpoint_node(self, painpoint_id: int):
         """Sync a single painpoint from SQLite to Kuzu."""
         df = self.sqlite.get_all_painpoints()
         painpoint = df[df['painpoint_id'] == painpoint_id]
@@ -44,11 +45,19 @@ class SyncManager:
             row = painpoint.iloc[0]
             self.kuzu.upsert_painpoint(
                 int(row['painpoint_id']),
-                int(row['org_id']),
                 row['description'],
                 row.get('severity'),
                 row.get('urgency'),
             )
+
+    def sync_painpoint_assignments(self, painpoint_id: int, org_ids: Optional[List[int]] = None):
+        """Sync organisation ↔ pain point links for a given pain point."""
+        if org_ids is None:
+            org_ids = self.sqlite.get_painpoint_assignments(painpoint_id)
+
+        self.kuzu.clear_painpoint_assignments(painpoint_id)
+        for org_id in org_ids:
+            self.kuzu.sync_painpoint_assignment(int(org_id), int(painpoint_id))
         
     def sync_commercial(self, commercial_id: int):
         """Sync a single commercial from SQLite to Kuzu."""
@@ -106,7 +115,6 @@ class SyncManager:
         for _, row in painpoints.iterrows():
             self.kuzu.upsert_painpoint(
                 int(row['painpoint_id']),
-                int(row['org_id']),
                 row['description'],
                 row.get('severity'),
                 row.get('urgency'),
@@ -132,6 +140,19 @@ class SyncManager:
                 int(row['to_org_id']),
                 row['relationship_type']
             )
+
+        # Sync Painpoint Assignments
+        logger.info("Syncing Painpoint Assignments...")
+        assignments = self.sqlite.get_all_painpoint_assignments()
+        if not assignments.empty:
+            assignments_map: Dict[int, List[int]] = {}
+            for _, row in assignments.iterrows():
+                painpoint_id = int(row['painpoint_id'])
+                org_id = int(row['org_id'])
+                assignments_map.setdefault(painpoint_id, []).append(org_id)
+
+            for painpoint_id, org_ids in assignments_map.items():
+                self.sync_painpoint_assignments(painpoint_id, org_ids)
 
         logger.info("✅ Full sync completed.")
 
