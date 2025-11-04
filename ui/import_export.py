@@ -21,7 +21,7 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
         table_type = st.selectbox(
             "Select data type to import",
-            ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship"]
+            ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship", "OrganisationPainPoint"]
         )
 
         uploaded_file = st.file_uploader(
@@ -34,7 +34,7 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             try:
                 df = pd.read_csv(uploaded_file)
 
-                st.write(f"Preview of uploaded data:")
+                st.write("Preview of uploaded data:")
                 st.dataframe(df.head())
 
                 st.write(f"**Rows:** {len(df)}")
@@ -106,7 +106,6 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                 for _, row in df.iterrows():
                                     success = sqlite_mgr.insert_painpoint(
                                         int(row.get('painpoint_id')),
-                                        int(row.get('org_id')),
                                         row.get('description'),
                                         row.get('severity'),
                                         row.get('urgency'),
@@ -114,7 +113,7 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                     if success:
                                         success_count += 1
                                         if sync_to_kuzu:
-                                            sync_mgr.sync_painpoint(int(row['painpoint_id']))
+                                            sync_mgr.sync_painpoint_assignments(int(row['painpoint_id']))
                                     else:
                                         error_count += 1
                                         logger.error(f"Failed to import PainPoint: {row['painpoint_id']}")
@@ -153,6 +152,25 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                     else:
                                         error_count += 1
                                         logger.error(f"Failed to import OrgRelationship: {row['from_org_id']} -> {row['to_org_id']}")
+                            
+                            elif table_type == "OrganisationPainPoint":
+                                for _, row in df.iterrows():
+                                    org_id = int(row['org_id'])
+                                    painpoint_id = int(row['painpoint_id'])
+                                    success = sqlite_mgr.assign_painpoint_to_organisation(
+                                        org_id,
+                                        painpoint_id
+                                    )
+                                    if success:
+                                        success_count += 1
+                                        if sync_to_kuzu:
+                                            sync_mgr.sync_painpoint_assignment(
+                                                org_id,
+                                                painpoint_id
+                                            )
+                                    else:
+                                        error_count += 1
+                                        logger.error(f"Failed to import OrganisationPainPoint: {org_id} - {painpoint_id}")
 
                             st.success(f"✅ Imported {success_count} records successfully!")
 
@@ -170,7 +188,7 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
         export_type = st.selectbox(
             "Select data to export",
-            ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship", "All Tables"]
+            ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship", "OrganisationPainPoint", "All Tables"]
         )
 
         if st.button("Generate CSV", type="primary"):
@@ -203,11 +221,15 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     # Only keep relevant columns
                     filename = "org_relationships_export.csv"
 
+                elif export_type == "OrganisationPainPoint":
+                    df = sqlite_mgr.get_all_painpoint_assignments()
+                    filename = "organisation_painpoints_export.csv"
+
                 elif export_type == "All Tables":
                     # Export all tables as a zip file
                     zip_buffer = io.BytesIO()
                     with zipfile.ZipFile(zip_buffer, "a", zipfile.ZIP_DEFLATED) as zip_file:
-                        for table in ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship"]:
+                        for table in ["Organisation", "Stakeholder", "PainPoint", "Commercial", "OrgRelationship", "OrganisationPainPoint"]:
                             if table == "Organisation":
                                 df = sqlite_mgr.get_all_organisations()
                             elif table == "Stakeholder":
@@ -222,6 +244,8 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             elif table == "OrgRelationship":
                                 df = sqlite_mgr.get_all_org_relationships()
                                 df = df[['from_org_id', 'to_org_id', 'relationship_type']]
+                            elif table == "OrganisationPainPoint":
+                                df = sqlite_mgr.get_all_painpoint_assignments()
 
                             csv_data = df.to_csv(index=False)
                             zip_file.writestr(f"{table.lower()}_export.csv", csv_data)

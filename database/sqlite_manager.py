@@ -175,6 +175,21 @@ class SQLiteManager:
             print(f"Error inserting organization relationship: {e}")
             return False
         
+    def insert_painpoint_assignment(self, org_id: int, painpoint_id: int) -> bool:
+        """Insert a new organisation ↔ painpoint relationship"""
+        try:
+            conn = self.get_connection()
+            cursor = conn.cursor()
+            cursor.execute("""
+                INSERT INTO OrganisationPainPoint (org_id, painpoint_id)
+                VALUES (?, ?)
+            """, (org_id, painpoint_id))
+            conn.commit()
+            return True
+        except sqlite3.IntegrityError as e:
+            print(f"Error inserting organisation ↔ painpoint assignment: {e}")
+            return False
+        
     # READ
     def get_all_organisations(self) -> pd.DataFrame:
         """Get all organisations as DataFrame."""
