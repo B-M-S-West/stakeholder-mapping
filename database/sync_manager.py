@@ -44,10 +44,19 @@ class SyncManager:
             row = painpoint.iloc[0]
             self.kuzu.upsert_painpoint(
                 int(row['painpoint_id']),
-                int(row['org_id']),
                 row['description'],
                 row.get('severity'),
                 row.get('urgency'),
+            )
+
+    def sync_painpoint_assignments(self, painpoint_id: int):
+        """Sync painpoint assignments for a given painpoint from SQLite to Kuzu."""
+        assignments = self.sqlite.get_painpoint_assignments(painpoint_id)
+        for _, row in assignments.iterrows():
+            self.kuzu.upsert_painpoint_assignment(
+                int(row['painpoint_id']),
+                int(row['stakeholder_id']),
+                row['assignment_type']
             )
         
     def sync_commercial(self, commercial_id: int):
@@ -106,7 +115,6 @@ class SyncManager:
         for _, row in painpoints.iterrows():
             self.kuzu.upsert_painpoint(
                 int(row['painpoint_id']),
-                int(row['org_id']),
                 row['description'],
                 row.get('severity'),
                 row.get('urgency'),
@@ -131,6 +139,15 @@ class SyncManager:
                 int(row['from_org_id']),
                 int(row['to_org_id']),
                 row['relationship_type']
+            )
+
+        # Sync Painpoint Assignments
+        logger.info("Syncing Painpoint Assignments...")
+        assignments = self.sqlite.get_all_painpoint_assignments()
+        for _, row in assignments.iterrows():
+            self.kuzu.upsert_painpoint_assignment(
+                int(row['org_id']),
+                int(row['painpoint_id'])
             )
 
         logger.info("✅ Full sync completed.")
