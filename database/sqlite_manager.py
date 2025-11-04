@@ -80,9 +80,9 @@ class SQLiteManager:
             )
         """)
 
-        # OrganisationPainPoints table
+        # OrganisationPainPoint table
         cursor.execute("""
-            CREATE TABLE IF NOT EXISTS OrganisationPainPoints (
+            CREATE TABLE IF NOT EXISTS OrganisationPainPoint (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 org_id INTEGER NOT NULL,
                 painpoint_id INTEGER NOT NULL,
@@ -215,7 +215,7 @@ class SQLiteManager:
         cursor = conn.cursor()
         cursor.execute("""
             SELECT org_id
-            FROM OrganisationPainPoints
+            FROM OrganisationPainPoint
             WHERE painpoint_id = ?
         """, (painpoint_id,))
         rows = cursor.fetchall()
@@ -226,7 +226,7 @@ class SQLiteManager:
         conn = self.get_connection()
         df = pd.read_sql_query("""
             SELECT org_id, painpoint_id
-            FROM OrganisationPainPoints
+            FROM OrganisationPainPoint
         """, conn)
         return df
     
@@ -322,11 +322,11 @@ class SQLiteManager:
             conn = self.get_connection()
             cursor = conn.cursor()
             # Delete existing assignments
-            cursor.execute("DELETE FROM OrganisationPainPoints WHERE painpoint_id = ?", (painpoint_id,))
+            cursor.execute("DELETE FROM OrganisationPainPoint WHERE painpoint_id = ?", (painpoint_id,))
             # Insert new assignments
             for org_id in org_ids:
                 cursor.execute("""
-                    INSERT INTO OrganisationPainPoints (org_id, painpoint_id)
+                    INSERT INTO OrganisationPainPoint (org_id, painpoint_id)
                     VALUES (?, ?)
                 """, (org_id, painpoint_id))
             conn.commit()

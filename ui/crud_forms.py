@@ -457,16 +457,18 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 )
             with col3:
                 orgs_df = sqlite_mgr.get_all_organisations()
-                org_filter = st.multiselect(
-                    "Filter by Organisation",
-                    options=orgs_df['org_name'].tolist(),
-                    default=[]
-                )
-
+                org_search_term = st.text_input("Search Organisation", "")
+            
             # Apply filters
-            filtered_df = pain_points_df[pain_points_df['severity'].isin(severity_filter) & pain_points_df['urgency'].isin(urgency_filter)]
-            if org_filter:
-                filtered_df = filtered_df[filtered_df['org_name'].isin(org_filter)]
+            filtered_df = pain_points_df[
+                pain_points_df['severity'].isin(severity_filter) & 
+                pain_points_df['urgency'].isin(urgency_filter)
+            ]
+            if org_search_term:
+                # Search the comma-separated string
+                filtered_df = filtered_df[
+                    filtered_df['org_names'].str.contains(org_search_term, case=False)
+                ]
 
             st.dataframe(filtered_df, width="stretch", hide_index=True)
 
@@ -474,54 +476,49 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
     with tab2:
         orgs_df = sqlite_mgr.get_all_organisations()
 
-        if orgs_df.empty:
-            st.warning("⚠️ Please add at least one organisation first!")
-        else:
-            with st.form("add_painpoint"):
-                st.write("### Add New Pain Point")
 
-                next_id = sqlite_mgr.get_next_id("PainPoint", "painpoint_id")
-                painpoint_id = st.number_input(
-                    "Pain Point ID",
-                    min_value=1,
-                    value=next_id,
-                    step=1,
-                    help="Unique identifier for the pain point."
-                )
+        with st.form("add_painpoint"):
+            st.write("### Add New Pain Point")
 
-                # Select organisation
-                org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
-                selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()))
-                org_id = org_options[selected_org]
+            next_id = sqlite_mgr.get_next_id("PainPoint", "painpoint_id")
+            painpoint_id = st.number_input(
+                "Pain Point ID",
+                min_value=1,
+                value=next_id,
+                step=1,
+                help="Unique identifier for the pain point."
+            )
 
-                description = st.text_area("Description*", placeholder="Describe the pain point")
-                severity = st.selectbox("Severity*", options=config.SEVERITY_LEVELS, index=2)
-                urgency = st.selectbox("Urgency*", options=config.URGENCY_LEVELS, index=2)
+            description = st.text_area("Description*", placeholder="Describe the pain point")
+            severity = st.selectbox("Severity*", options=config.SEVERITY_LEVELS, index=2)
+            urgency = st.selectbox("Urgency*", options=config.URGENCY_LEVELS, index=2)
 
-                col1, col2 = st.columns(2)
-                with col1:
-                    submit = st.form_submit_button("Add Pain Point", type="primary", width="stretch")
-                with col2:
-                    sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+            st.info("You can assign organisations in the 'Edit' tab after adding.")
 
-                if submit:
-                    if not description:
-                        st.error("Pain point description is required!")
+            col1, col2 = st.columns(2)
+            with col1:
+                submit = st.form_submit_button("Add Pain Point", type="primary", width="stretch")
+            with col2:
+                sync_to_kuzu = st.checkbox("Sync to graph", value=True)
+
+            if submit:
+                if not description:
+                    st.error("Pain point description is required!")
+                else:
+                    success = sqlite_mgr.insert_painpoint(
+                        painpoint_id, description, severity, urgency
+                    )
+
+                    if success:
+                        st.success("✅ Added pain point. Go to the 'Edit' tab to assign organisations.")
+
+                        if sync_to_kuzu:
+                            sync_mgr.sync_painpoint_node(painpoint_id)
+                            st.success("✅ Synced to graph database")
+
+                        st.rerun()
                     else:
-                        success = sqlite_mgr.insert_painpoint(
-                            painpoint_id, org_id, description, severity, urgency
-                        )
-
-                        if success:
-                            st.success(f"✅ Added pain point")
-
-                            if sync_to_kuzu:
-                                sync_mgr.sync_painpoint(painpoint_id)
-                                st.success("✅ Synced to graph database")
-
-                            st.rerun()
-                        else:
-                            st.error("❌ Failed to add pain point (ID may already exist)")
+                        st.error("❌ Failed to add pain point (ID may already exist)")
 
     # Edit existing
     with tab3:
@@ -531,7 +528,13 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
         if painpoints_df.empty:
             st.info("No pain points found. Add one using the 'Add New' tab.")
         else:
-            painpoint_options = {f"{row['description'][:50]}... - {row['org_name']} (ID: {row['painpoint_id']})": row['painpoint_id'] for _, row in painpoints_df.iterrows()}
+            painpoint_options = {}
+            for _, row in painpoints_df.iterrows():
+                org_summary = row.get("org_names")
+                if not org_summary or org_summary != org_summary:  # handle None/NaN
+                    org_summary = "Unassigned"
+                label = f"{row['description'][:50]}... - {org_summary} (ID: {row['painpoint_id']})"
+                painpoint_options[label] = row["painpoint_id"]
 
             selected_painpoint = st.selectbox("Select Pain Point to Edit", options=list(painpoint_options.keys()))
 
@@ -539,14 +542,23 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 painpoint_id = painpoint_options[selected_painpoint]
                 painpoint_data = painpoints_df[painpoints_df['painpoint_id'] == painpoint_id].iloc[0]
 
+                # Get current assignments
+                current_org_ids = sqlite_mgr.get_painpoint_assignments(painpoint_id)
+                org_id_to_name_map = {
+                    row["org_id"]: row["org_name"] for _, row in orgs_df.iterrows()
+                }
+                org_name_to_id_map = {
+                    row["org_name"]: row["org_id"] for _, row in orgs_df.iterrows()
+                }
+
+                current_org_names = [
+                    org_id_to_name_map[org_id]
+                    for org_id in current_org_ids
+                    if org_id in org_id_to_name_map
+                ]
+
                 with st.form("edit_painpoint"):
                     st.write(f"### Edit Pain Point (ID: {painpoint_id})")
-
-                    # Select organisation
-                    org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
-                    current_org_name = painpoint_data['org_name']
-                    selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()), index=list(org_options.keys()).index(current_org_name) if current_org_name in org_options.keys() else 0)
-                    org_id = org_options[selected_org]
 
                     description = st.text_area("Description*", value=painpoint_data['description'])
 
@@ -555,6 +567,20 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         severity = st.selectbox("Severity*", options=config.SEVERITY_LEVELS, index=config.SEVERITY_LEVELS.index(painpoint_data['severity']))
                     with col2:
                         urgency = st.selectbox("Urgency*", options=config.URGENCY_LEVELS, index=config.URGENCY_LEVELS.index(painpoint_data['urgency']))
+
+                    st.markdown("---")
+                    st.write("#### Assign to Organisations")
+
+                    selected_org_names = st.multiselect(
+                        "Organisations",
+                        options=list(org_name_to_id_map.keys()),
+                        default=current_org_names,
+                        label_visibility="collapsed",
+                    )
+
+                    selected_org_ids = [
+                        org_name_to_id_map[name] for name in selected_org_names
+                    ]
 
                     col1, col2 = st.columns(2)
                     with col1:
@@ -567,14 +593,19 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             st.error("Pain point description is required!")
                         else:
                             success = sqlite_mgr.update_painpoint(
-                                painpoint_id, org_id, description, severity, urgency
+                                painpoint_id, description, severity, urgency
                             )
 
-                            if success:
-                                st.success(f"✅ Updated pain point")
+                            assign_success = sqlite_mgr.update_painpoint_assignments(
+                                painpoint_id, selected_org_ids
+                            )
+
+                            if success and assign_success:
+                                st.success("✅ Updated pain point and assignments")
 
                                 if sync_to_kuzu:
-                                    sync_mgr.sync_painpoint(painpoint_id)
+                                    sync_mgr.sync_painpoint_node(painpoint_id)
+                                    sync_mgr.sync_painpoint_assignments(painpoint_id, selected_org_ids)
                                     st.success("✅ Synced to graph database")
 
                                 st.rerun()
@@ -588,7 +619,13 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
         if painpoints_df.empty:
             st.info("No pain points found. Add one using the 'Add New' tab.")
         else:
-            painpoint_options = {f"{row['description'][:50]}... - {row['org_name']} (ID: {row['painpoint_id']})": row['painpoint_id'] for _, row in painpoints_df.iterrows()}
+            painpoint_options = {}
+            for _, row in painpoints_df.iterrows():
+                org_summary = row.get("org_names")
+                if not org_summary or org_summary != org_summary:  # handle None/NaN
+                    org_summary = "Unassigned"
+                label = f"{row['description'][:50]}... - {org_summary} (ID: {row['painpoint_id']})"
+                painpoint_options[label] = row["painpoint_id"]
 
             selected_painpoint = st.selectbox("Select Pain Point to Delete", options=list(painpoint_options.keys()))
 
@@ -597,7 +634,7 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 painpoint_data = painpoints_df[painpoints_df['painpoint_id'] == painpoint_id].iloc[0]
 
                 st.write(f"**Description:** {painpoint_data['description']}")
-                st.write(f"**Organisation:** {painpoint_data['org_name']}")
+                st.write(f"**Organisation:** {painpoint_data['org_names'] or 'N/A'}") 
                 st.write(f"**Severity:** {painpoint_data['severity']}")
                 st.write(f"**Urgency:** {painpoint_data['urgency']}")
 
@@ -612,7 +649,7 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     success = sqlite_mgr.delete_painpoint(painpoint_id)
 
                     if success:
-                        st.success(f"✅ Deleted pain point")
+                        st.success("✅ Deleted pain point")
 
                         if sync_to_kuzu:
                             sync_mgr.delete_painpoint(painpoint_id)
@@ -708,7 +745,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     )
 
                     if success:
-                        st.success(f"✅ Added commercial entry")
+                        st.success("✅ Added commercial entry")
 
                         if sync_to_kuzu:
                             sync_mgr.sync_commercial(commercial_id)
@@ -758,7 +795,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                         )
 
                         if success:
-                            st.success(f"✅ Updated commercial entry")
+                            st.success("✅ Updated commercial entry")
 
                             if sync_to_kuzu:
                                 sync_mgr.sync_commercial(commercial_id)
@@ -798,7 +835,7 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     success = sqlite_mgr.delete_commercial(commercial_id)
 
                     if success:
-                        st.success(f"✅ Deleted commercial entry")
+                        st.success("✅ Deleted commercial entry")
 
                         if sync_to_kuzu:
                             sync_mgr.delete_commercial(commercial_id)
@@ -966,7 +1003,7 @@ def render_relationship_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     success = sqlite_mgr.delete_org_relationship(rel_id)
 
                     if success:
-                        st.success(f"✅ Deleted relationship")
+                        st.success("✅ Deleted relationship")
 
                         if sync_to_kuzu:
                             sync_mgr.delete_relationship(

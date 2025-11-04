@@ -154,7 +154,7 @@ if page == "📊 Dashboard":
         
         with tab3:
             if not painpoints_df.empty:
-                st.dataframe(painpoints_df[['description', 'org_name', 'severity', 'urgency']].tail(5), width='stretch', hide_index=True)
+                st.dataframe(painpoints_df[['description', 'org_names', 'severity', 'urgency']].tail(5), width='stretch', hide_index=True)
             else:
                 st.info("No pain points yet")
     
