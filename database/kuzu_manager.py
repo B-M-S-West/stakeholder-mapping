@@ -90,21 +90,20 @@ class KuzuManager:
 # ======= Sync Operations (called by sync_manager) =======
 
     def upsert_organisations(self, org_id: int, org_name: str, org_type: str, org_function: str):
-        """Insert or update an organisation."""
-        # Delete if exists
+        """Insert or update an organisation using MERGE."""
+        # MERGE finds the node by its primary key (org_id) or creates it.
+        # ON CREATE SET properties only if the node is new.
+        # ON MATCH SET properties to update the node if it already exists.
         self.conn.execute("""
-            MATCH (o:Organisation {org_id: $org_id})
-            DELETE o
-        """, {'org_id': org_id})
-
-        # Insert new
-        self.conn.execute("""
-            CREATE (o:Organisation {
-                org_id: $org_id,
-                org_name: $org_name,
-                org_type: $org_type,
-                org_function: $org_function
-            })
+            MERGE (o:Organisation {org_id: $org_id})
+            ON CREATE SET
+                o.org_name = $org_name,
+                o.org_type = $org_type,
+                o.org_function = $org_function
+            ON MATCH SET
+                o.org_name = $org_name,
+                o.org_type = $org_type,
+                o.org_function = $org_function
         """, {
             'org_id': org_id,
             'org_name': org_name,
@@ -113,22 +112,20 @@ class KuzuManager:
         })
 
     def upsert_stakeholder(self, stakeholder_id: int, org_id: int, name: str, job_title: str, role: str):
-        """Insert or update a stakeholder."""
-        # Delete if exists
+        """Insert or update a stakeholder using MERGE."""
+        # Upsert the Stakeholder node.
         self.conn.execute("""
-            MATCH (s:Stakeholder {stakeholder_id: $stakeholder_id})
-            DELETE s
-        """, {'stakeholder_id': stakeholder_id})
-
-        # Insert new
-        self.conn.execute("""
-            CREATE (s:Stakeholder {
-                stakeholder_id: $stakeholder_id,
-                org_id: $org_id,
-                name: $name,
-                job_title: $job_title,
-                role: $role
-            })
+            MERGE (s:Stakeholder {stakeholder_id: $stakeholder_id})
+            ON CREATE SET
+                s.org_id = $org_id,
+                s.name = $name,
+                s.job_title = $job_title,
+                s.role = $role
+            ON MATCH SET
+                s.org_id = $org_id,
+                s.name = $name,
+                s.job_title = $job_title,
+                s.role = $role
         """, {
             'stakeholder_id': stakeholder_id,
             'org_id': org_id,
@@ -137,7 +134,14 @@ class KuzuManager:
             'role': role
         })
 
-        # Create relationship
+        # Remove any *existing* HasStakeholder relationships from this stakeholder.
+        # This handles cases where the stakeholder might have been moved to a new org.
+        self.conn.execute("""
+            MATCH (s:Stakeholder {stakeholder_id: $stakeholder_id})<-[r:HasStakeholder]-(o:Organisation)
+            DELETE r
+        """, {'stakeholder_id': stakeholder_id})
+
+        # Create the new/correct relationship.
         self.conn.execute("""
             MATCH (o:Organisation {org_id: $org_id}), (s:Stakeholder {stakeholder_id: $stakeholder_id})
             MERGE (o)-[:HasStakeholder]->(s)
@@ -147,21 +151,18 @@ class KuzuManager:
         })
 
     def upsert_painpoint(self, painpoint_id: int, description: str, severity: str, urgency: str):
-        """Insert or update a pain point."""
-        # Delete if exists
+        """Insert or update a pain point using MERGE."""
+        # Merge the node
         self.conn.execute("""
-            MATCH (p:PainPoint {painpoint_id: $painpoint_id})
-            DELETE p
-        """, {'painpoint_id': painpoint_id})
-
-        # Insert new
-        self.conn.execute("""
-            CREATE (p:PainPoint {
-                painpoint_id: $painpoint_id,
-                description: $description,
-                severity: $severity,
-                urgency: $urgency
-            })
+            MERGE (p:PainPoint {painpoint_id: $painpoint_id})
+            ON CREATE SET
+                p.description = $description,
+                p.severity = $severity,
+                p.urgency = $urgency
+            ON MATCH SET
+                p.description = $description,
+                p.severity = $severity,
+                p.urgency = $urgency
         """, {
             'painpoint_id': painpoint_id,
             'description': description,
@@ -170,21 +171,18 @@ class KuzuManager:
         })
 
     def upsert_commercial(self, commercial_id: int, org_id: int, method: str, budget: float):
-        """Insert or update a commercial."""
-        # Delete if exists
+        """Insert or update a commercial using MERGE."""
+        # Upsert the Commercial node.
         self.conn.execute("""
-            MATCH (c:Commercial {commercial_id: $commercial_id})
-            DELETE c
-        """, {'commercial_id': commercial_id})
-
-        # Insert new
-        self.conn.execute("""
-            CREATE (c:Commercial {
-                commercial_id: $commercial_id,
-                org_id: $org_id,
-                method: $method,
-                budget: $budget
-            })
+            MERGE (c:Commercial {commercial_id: $commercial_id})
+            ON CREATE SET
+                c.org_id = $org_id,
+                c.method = $method,
+                c.budget = $budget
+            ON MATCH SET
+                c.org_id = $org_id,
+                c.method = $method,
+                c.budget = $budget
         """, {
             'commercial_id': commercial_id,
             'org_id': org_id,
@@ -192,7 +190,13 @@ class KuzuManager:
             'budget': budget
         })
 
-        # Create relationship
+        # Remove any *existing* ProcuresThrough relationships for this commercial node.
+        self.conn.execute("""
+            MATCH (c:Commercial {commercial_id: $commercial_id})<-[r:ProcuresThrough]-(o:Organisation)
+            DELETE r
+        """, {'commercial_id': commercial_id})
+
+        # Create the new/correct relationship.
         self.conn.execute("""
             MATCH (o:Organisation {org_id: $org_id}), (c:Commercial {commercial_id: $commercial_id})
             MERGE (o)-[:ProcuresThrough]->(c)
@@ -203,20 +207,11 @@ class KuzuManager:
 
     def upsert_relationship(self, from_org_id: int, to_org_id: int, relationship_type: str):
         """Insert or update an organisation relationship."""
-        # Delete if exists
-        self.conn.execute("""
-            MATCH (a:Organisation {org_id: $from_org_id})-[r:OrgRelation {relationship_type: $relationship_type}]->(b:Organisation {org_id: $to_org_id})
-            DELETE r
-        """, {
-            'from_org_id': from_org_id,
-            'to_org_id': to_org_id,
-            'relationship_type': relationship_type
-        })
-
-        # Create relationship
+        # Use MERGE to create the relationship if it doesn't already exist.
+        # This is idempotent and more efficient than deleting and then creating.
         self.conn.execute("""
             MATCH (a:Organisation {org_id: $from_org_id}), (b:Organisation {org_id: $to_org_id})
-            CREATE (a)-[:OrgRelation {relationship_type: $relationship_type}]->(b)
+            MERGE (a)-[r:OrgRelation {relationship_type: $relationship_type}]->(b)
         """, {
             'from_org_id': from_org_id,
             'to_org_id': to_org_id,

@@ -113,7 +113,7 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                     if success:
                                         success_count += 1
                                         if sync_to_kuzu:
-                                            sync_mgr.sync_painpoint_assignments(int(row['painpoint_id']))
+                                            sync_mgr.sync_painpoint_node(int(row['painpoint_id']))
                                     else:
                                         error_count += 1
                                         logger.error(f"Failed to import PainPoint: {row['painpoint_id']}")
@@ -157,14 +157,14 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                 for _, row in df.iterrows():
                                     org_id = int(row['org_id'])
                                     painpoint_id = int(row['painpoint_id'])
-                                    success = sqlite_mgr.assign_painpoint_to_organisation(
+                                    success = sqlite_mgr.insert_painpoint_assignment(
                                         org_id,
                                         painpoint_id
                                     )
                                     if success:
                                         success_count += 1
                                         if sync_to_kuzu:
-                                            sync_mgr.sync_painpoint_assignment(
+                                            sync_mgr.sync_painpoint_assignments(
                                                 org_id,
                                                 painpoint_id
                                             )

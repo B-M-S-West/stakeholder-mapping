@@ -730,7 +730,13 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()))
                 org_id = org_options[selected_org]
 
-                method = st.text_area("Method*", placeholder="Describe the commercial method")
+                method = st.selectbox(
+                    "Select Method*",
+                    options=config.COMMERCIAL_METHODS,
+                    index=0,
+                    help="Commercial method."
+                )
+                
                 budget = st.number_input("Budget (£)*", min_value=0.0, format="%.2f", step=1000.0, help="Budget in GBP")
 
                 col1, col2 = st.columns(2)
