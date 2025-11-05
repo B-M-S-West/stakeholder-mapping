@@ -219,6 +219,7 @@ class SQLiteManager:
             return True
         except sqlite3.IntegrityError as e:
             print(f"Error inserting organization relationship: {e}")
+            conn.rollback()
             return False
         
     def insert_painpoint_assignment(self, org_id: int, painpoint_id: int) -> bool:
@@ -234,6 +235,7 @@ class SQLiteManager:
             return True
         except sqlite3.IntegrityError as e:
             print(f"Error inserting organisation ↔ painpoint assignment: {e}")
+            conn.rollback()
             return False
         
     # READ
