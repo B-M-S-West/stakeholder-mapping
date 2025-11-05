@@ -1,4 +1,6 @@
+from hmac import new
 import sqlite3
+from click import Option
 import pandas as pd
 from pathlib import Path
 from typing import List, Dict, Any, Optional
@@ -27,7 +29,7 @@ class SQLiteManager:
         # Organisation table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS Organisation (
-                org_id INTEGER PRIMARY KEY,
+                org_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 org_name TEXT NOT NULL UNIQUE,
                 org_type TEXT NOT NULL,
                 org_function TEXT
@@ -37,7 +39,7 @@ class SQLiteManager:
         # Stakeholder table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS Stakeholder (
-                stakeholder_id INTEGER PRIMARY KEY,
+                stakeholder_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 org_id INTEGER NOT NULL,
                 name TEXT NOT NULL,
                 job_title TEXT,
@@ -49,7 +51,7 @@ class SQLiteManager:
         # PainPoint table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS PainPoint (
-                painpoint_id INTEGER PRIMARY KEY,
+                painpoint_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 description TEXT NOT NULL,
                 severity TEXT,
                 urgency TEXT
@@ -59,7 +61,7 @@ class SQLiteManager:
         # Commercial table
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS Commercial (
-                commercial_id INTEGER PRIMARY KEY,
+                commercial_id INTEGER PRIMARY KEY AUTOINCREMENT,
                 org_id INTEGER NOT NULL,
                 method TEXT NOT NULL,
                 budget REAL,
@@ -97,67 +99,111 @@ class SQLiteManager:
 # CRUD Operations
 
     # CREATE
-    def insert_organisation(self, org_id: int, org_name: str, org_type: str, org_function: str) -> bool:
-        """Insert a new organisation."""
+    def insert_organisation(self, org_name: str, org_type: str, org_function: str, org_id: Optional[int] = None) -> Optional[int]:
+        """Insert a new organisation. Returns the new org_id if successful"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             org_type_norm = validators.normalize_org_type(org_type)
-            cursor.execute("""
-                INSERT INTO Organisation (org_id, org_name, org_type, org_function)
-                VALUES (?, ?, ?, ?)
-            """, (org_id, org_name, org_type_norm, org_function))
+            
+            if org_id is None:
+                # ID is None, let AUTOINCREMENT handle it
+                cursor.execute("""
+                    INSERT INTO Organisation (org_name, org_type, org_function)
+                    VALUES (?, ?, ?)
+                """, (org_name, org_type_norm, org_function))
+                new_id = cursor.lastrowid
+            else:
+                # ID is provided, use it
+                cursor.execute("""
+                    INSERT INTO Organisation (org_id, org_name, org_type, org_function)
+                    VALUES (?, ?, ?, ?)
+                """, (org_id, org_name, org_type_norm, org_function))
+                new_id = org_id
+
             conn.commit()
-            return True
+            return new_id
         except sqlite3.IntegrityError as e:
             print(f"Error inserting organisation: {e}")
-            return False
+            conn.rollback()
+            return None
         
-    def insert_stakeholder(self, stakeholder_id: int, org_id: int, name: str, job_title: str, role: str) -> bool:
-        """Insert a new stakeholder."""
+    def insert_stakeholder(self, org_id: int, name: str, job_title: str, role: str, stakeholder_id: Optional[int] = None) -> Optional[int]:
+        """Insert a new stakeholder. Returns the new stakeholder_id if successful"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO Stakeholder (stakeholder_id, org_id, name, job_title, role)
-                VALUES (?, ?, ?, ?, ?)
-            """, (stakeholder_id, org_id, name, job_title, role))
+            if stakeholder_id is None:
+                # ID is None, let AUTOINCREMENT handle it
+                cursor.execute("""
+                    INSERT INTO Stakeholder (org_id, name, job_title, role)
+                    VALUES (?, ?, ?, ?)
+                """, (org_id, name, job_title, role))
+                new_id = cursor.lastrowid
+            else:
+                # ID is provided, use it
+                cursor.execute("""
+                    INSERT INTO Stakeholder (stakeholder_id, org_id, name, job_title, role)
+                    VALUES (?, ?, ?, ?, ?)
+                """, (stakeholder_id, org_id, name, job_title, role))
             conn.commit()
-            return True
+            return new_id
         except sqlite3.IntegrityError as e:
             print(f"Error inserting stakeholder: {e}")
-            return False
+            conn.rollback()
+            return None
         
-    def insert_painpoint(self, painpoint_id: int, description: str, severity: str, urgency: str) -> bool:
-        """Insert a new pain point."""
+    def insert_painpoint(self, description: str, severity: str, urgency: str, painpoint_id: Optional[int] = None) -> Optional[int]:
+        """Insert a new pain point. Returns the new painpoint_id if successful"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
-            cursor.execute("""
-                INSERT INTO PainPoint (painpoint_id, description, severity, urgency)
-                VALUES (?, ?, ?, ?)
-            """, (painpoint_id, description, severity, urgency))
+            if painpoint_id is None:
+                # ID is None, let AUTOINCREMENT handle it
+                cursor.execute("""
+                    INSERT INTO PainPoint (description, severity, urgency)
+                    VALUES (?, ?, ?)
+                """, (description, severity, urgency))
+                new_id = cursor.lastrowid
+            else:
+                # ID is provided, use it
+                cursor.execute("""
+                    INSERT INTO PainPoint (painpoint_id, description, severity, urgency)
+                    VALUES (?, ?, ?, ?)
+                """, (painpoint_id, description, severity, urgency))
             conn.commit()
-            return True
+            return new_id
         except sqlite3.IntegrityError as e:
             print(f"Error inserting pain point: {e}")
-            return False
-        
-    def insert_commercial(self, commercial_id: int, org_id: int, method: str, budget: float) -> bool:
-        """Insert a new commercial entry."""
+            conn.rollback()
+            return None
+
+    def insert_commercial(self, org_id: int, method: str, budget: float, commercial_id: Optional[int] = None) -> Optional[int]:
+        """Insert a new commercial entry. Returns the new commercial_id if successful"""
         try:
             conn = self.get_connection()
             cursor = conn.cursor()
             budget_norm = validators.parse_budget(budget)
-            cursor.execute("""
-                INSERT INTO Commercial (commercial_id, org_id, method, budget)
-                VALUES (?, ?, ?, ?)
-            """, (commercial_id, org_id, method, budget_norm))
+
+            if commercial_id is None:
+                # ID is None, let AUTOINCREMENT handle it
+                cursor.execute("""
+                    INSERT INTO Commercial (org_id, method, budget)
+                    VALUES (?, ?, ?)
+                """, (org_id, method, budget_norm))
+                new_id = cursor.lastrowid
+            else:
+                # ID is provided, use it
+                cursor.execute("""
+                    INSERT INTO Commercial (commercial_id, org_id, method, budget)
+                    VALUES (?, ?, ?, ?)
+                """, (commercial_id, org_id, method, budget_norm))
             conn.commit()
-            return True
+            return new_id
         except sqlite3.IntegrityError as e:
             print(f"Error inserting commercial entry: {e}")
-            return False
+            conn.rollback()
+            return None
         
     def insert_org_relationship(self, from_org_id: int, to_org_id: int, relationship_type: str) -> bool:
         """Insert a new organization relationship."""
@@ -427,15 +473,7 @@ class SQLiteManager:
             print(f"Error deleting organization relationship: {e}")
             return False
         
-    # UTILITY
-    def get_next_id(self, table: str, id_column: str) -> int:
-        """Get the next available ID for a given table and ID column."""
-        conn = self.get_connection()
-        cursor = conn.cursor()
-        cursor.execute(f"SELECT MAX({id_column}) AS max_id FROM {table}")
-        result = cursor.fetchone()[0]
-        return (result or 0) + 1
-    
+    # UTILITY   
     def close_connection(self):
         """Close the database connection."""
         if self.conn:

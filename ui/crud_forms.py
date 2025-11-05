@@ -1,3 +1,4 @@
+from hmac import new
 import streamlit as st
 from database.sqlite_manager import SQLiteManager
 from database.sync_manager import SyncManager
@@ -84,16 +85,6 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
         with st.form("add_organisation"):
             st.write("### Add New Organisation")
 
-            # Auto-generate next ID
-            next_id = sqlite_mgr.get_next_id("Organisation", "org_id")
-            org_id = st.number_input(
-                "Organisation ID",
-                min_value=1,
-                value=next_id,
-                step=1,
-                help="Unique identifier for the organisation."
-            )
-
             org_name = st.text_input(
                 "Organisation Name",
                 placeholder="Enter organisation name",
@@ -124,15 +115,15 @@ def render_organisation_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 if not org_name:
                     st.error("Organisation name is required!")
                 else:
-                    success = sqlite_mgr.insert_organisation(
-                        org_id, org_name, org_type, org_function
+                    new_id = sqlite_mgr.insert_organisation(
+                        org_name, org_type, org_function
                     )
-                    
-                    if success:
-                        st.success(f"✅ Added organisation: {org_name}")
+
+                    if new_id:
+                        st.success(f"✅ Added organisation: {org_name} with ID {new_id}")
                         
                         if sync_to_kuzu:
-                            sync_mgr.sync_organisation(org_id)
+                            sync_mgr.sync_organisation(new_id)
                             st.success("✅ Synced to graph database")
                         
                         st.rerun()
@@ -285,15 +276,6 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             with st.form("add_stakeholder"):
                 st.write("### Add New Stakeholder")
 
-                next_id = sqlite_mgr.get_next_id("Stakeholder", "stakeholder_id")
-                stakeholder_id = st.number_input(
-                    "Stakeholder ID",
-                    min_value=1,
-                    value=next_id,
-                    step=1,
-                    help="Unique identifier for the stakeholder."
-                )
-
                 # Select organisation
                 org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
                 selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()))
@@ -313,15 +295,15 @@ def render_stakeholder_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     if not name:
                         st.error("Stakeholder name is required!")
                     else:
-                        success = sqlite_mgr.insert_stakeholder(
-                            stakeholder_id, org_id, name, job_title, role
+                        new_id = sqlite_mgr.insert_stakeholder(
+                            org_id, name, job_title, role
                         )
 
-                        if success:
-                            st.success(f"✅ Added stakeholder: {name}")
+                        if new_id:
+                            st.success(f"✅ Added stakeholder: {name} with ID {new_id}")
 
                             if sync_to_kuzu:
-                                sync_mgr.sync_stakeholder(stakeholder_id)
+                                sync_mgr.sync_stakeholder(new_id)
                                 st.success("✅ Synced to graph database")
 
                             st.rerun()
@@ -480,15 +462,6 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
         with st.form("add_painpoint"):
             st.write("### Add New Pain Point")
 
-            next_id = sqlite_mgr.get_next_id("PainPoint", "painpoint_id")
-            painpoint_id = st.number_input(
-                "Pain Point ID",
-                min_value=1,
-                value=next_id,
-                step=1,
-                help="Unique identifier for the pain point."
-            )
-
             description = st.text_area("Description*", placeholder="Describe the pain point")
             severity = st.selectbox("Severity*", options=config.SEVERITY_LEVELS, index=2)
             urgency = st.selectbox("Urgency*", options=config.URGENCY_LEVELS, index=2)
@@ -505,15 +478,15 @@ def render_painpoint_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                 if not description:
                     st.error("Pain point description is required!")
                 else:
-                    success = sqlite_mgr.insert_painpoint(
-                        painpoint_id, description, severity, urgency
+                    new_id = sqlite_mgr.insert_painpoint(
+                        description, severity, urgency
                     )
 
-                    if success:
-                        st.success("✅ Added pain point. Go to the 'Edit' tab to assign organisations.")
+                    if new_id:
+                        st.success(f"✅ Added pain point ({new_id}). Go to the 'Edit' tab to assign organisations.")
 
                         if sync_to_kuzu:
-                            sync_mgr.sync_painpoint_node(painpoint_id)
+                            sync_mgr.sync_painpoint_node(new_id)
                             st.success("✅ Synced to graph database")
 
                         st.rerun()
@@ -716,15 +689,6 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
             with st.form("add_commercial"):
                 st.write("### Add New Commercial Entry")
 
-                next_id = sqlite_mgr.get_next_id("Commercial", "commercial_id")
-                commercial_id = st.number_input(
-                    "Commercial ID",
-                    min_value=1,
-                    value=next_id,
-                    step=1,
-                    help="Unique identifier for the commercial entry."
-                )
-
                 # Select organisation
                 org_options = {f"{row['org_name']}": row['org_id'] for _, row in orgs_df.iterrows()}
                 selected_org = st.selectbox("Select Organisation*", options=list(org_options.keys()))
@@ -746,15 +710,15 @@ def render_commercial_crud(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                     sync_to_kuzu = st.checkbox("Sync to graph", value=True)
 
                 if submit:
-                    success = sqlite_mgr.insert_commercial(
-                        commercial_id, org_id, method, budget
+                    new_id = sqlite_mgr.insert_commercial(
+                        org_id, method, budget
                     )
 
-                    if success:
-                        st.success("✅ Added commercial entry")
+                    if new_id:
+                        st.success(f"✅ Added commercial entry ({new_id})")
 
                         if sync_to_kuzu:
-                            sync_mgr.sync_commercial(commercial_id)
+                            sync_mgr.sync_commercial(new_id)
                             st.success("✅ Synced to graph database")
 
                         st.rerun()
