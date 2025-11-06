@@ -1,0 +1,19 @@
+# Git
+.git
+.gitignore
+
+# Python cache and virtual env
+__pycache__/
+.venv/
+*.pyc
+
+# Local data and databases (should not be *copied* into the image)
+govmap.db
+govmap.kuzu/
+*.db-wal
+*.db-shm
+
+# IDE / OS files
+.vscode/
+.idea/
+.DS_Store

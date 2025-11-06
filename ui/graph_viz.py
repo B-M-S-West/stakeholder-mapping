@@ -149,9 +149,9 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
 
         # Configure physics
         if physics_enabled:
-            if layout_algorithm == "barnes_hut":
+            if layout_algorithm == "force_atlas_2based":
                 net.barnes_hut()
-            elif layout_algorithm == "force_atlas_2based":
+            elif layout_algorithm == "barnes_hut":
                 net.force_atlas_2based()
             elif layout_algorithm == "hierarchical":
                 net.show_buttons(filter_=["physics"])
@@ -283,10 +283,16 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
         # Node details panel
         st.subheader("📊 Organisation Details")
 
+        # Filter for organisations only
+        org_nodes = [
+            node for node in filtered_nodes if validators.normalize_node_type(node.get("type")) == "organisation"
+        ]
+
         # Create a searchable dropdown of all nodes
         node_options = {
-            f"{node['label']} ({validators.normalize_node_type(node.get('type'))})": node for node in filtered_nodes
+            f"{node['label']} ({validators.normalize_org_type(node.get('org_type', 'N/A'))})": node for node in org_nodes
         }
+        
         selected_node_label = st.selectbox(
             "Select an Organisation to view details", options=list(node_options.keys())
         )
