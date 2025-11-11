@@ -5,7 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.9"
 dependencies = [
-    "dash>=3.2.0",
     "kuzu>=0.11.2",
     "loguru>=0.7.3",
     "numpy>=2.0.2",

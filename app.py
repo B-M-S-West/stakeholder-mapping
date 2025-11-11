@@ -30,6 +30,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize database managers
+@st.cache_resource
 def init_databases():
     """Initialize database connections"""
     sqlite_mgr = SQLiteManager()
