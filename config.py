@@ -1,5 +1,4 @@
 from pathlib import Path
-import os
 
 # Project paths
 PROJECT_ROOT = Path(__file__).resolve().parent
@@ -9,9 +8,9 @@ RAW_DATA_DIR = DATA_DIR / "raw"
 EXPORT_DIR = DATA_DIR / "exports"
 
 # Database paths
-SQLITE_DB = PROJECT_ROOT / "govmap.db"
+SQLITE_DB = DATA_DIR / "govmap.db"
 # Kuzu DB directory / file
-KUZU_DB = PROJECT_ROOT / "govmap.kuzu"
+KUZU_DB = DATA_DIR / "govmap.kuzu"
 
 # Ensure directories exist
 RAW_DATA_DIR.mkdir(parents=True, exist_ok=True)

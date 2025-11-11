@@ -30,7 +30,7 @@ st.markdown("""
 """, unsafe_allow_html=True)
 
 # Initialize database managers
-@st.cache_resource
+# @st.cache_resource
 def init_databases():
     """Initialize database connections"""
     sqlite_mgr = SQLiteManager()
@@ -38,7 +38,13 @@ def init_databases():
     sync_mgr = SyncManager(sqlite_mgr, kuzu_mgr)
     return sqlite_mgr, kuzu_mgr, sync_mgr
 
-sqlite_mgr, kuzu_mgr, sync_mgr = init_databases()
+try:
+    sqlite_mgr, kuzu_mgr, sync_mgr = init_databases()
+except Exception as e:
+    st.error("❌ **Error initializing databases!**")
+    st.error("The app cannot start. Please check database files and dependencies.")
+    st.exception(e)  # This will display the full error traceback
+    st.stop()  # This stops the script gracefully
 
 # Sidebar navigation
 with st.sidebar:
