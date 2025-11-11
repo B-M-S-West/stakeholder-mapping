@@ -146,6 +146,7 @@ class SQLiteManager:
                     INSERT INTO Stakeholder (stakeholder_id, org_id, name, job_title, role)
                     VALUES (?, ?, ?, ?, ?)
                 """, (stakeholder_id, org_id, name, job_title, role))
+                new_id = stakeholder_id
             conn.commit()
             return new_id
         except sqlite3.IntegrityError as e:
@@ -171,6 +172,7 @@ class SQLiteManager:
                     INSERT INTO PainPoint (painpoint_id, description, severity, urgency)
                     VALUES (?, ?, ?, ?)
                 """, (painpoint_id, description, severity, urgency))
+                new_id = painpoint_id
             conn.commit()
             return new_id
         except sqlite3.IntegrityError as e:
@@ -198,6 +200,7 @@ class SQLiteManager:
                     INSERT INTO Commercial (commercial_id, org_id, method, budget)
                     VALUES (?, ?, ?, ?)
                 """, (commercial_id, org_id, method, budget_norm))
+                new_id = commercial_id
             conn.commit()
             return new_id
         except sqlite3.IntegrityError as e:

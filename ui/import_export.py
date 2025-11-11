@@ -72,10 +72,10 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             if table_type == "Organisation":
                                 for _, row in df.iterrows():
                                     success = sqlite_mgr.insert_organisation(
-                                        int(row['org_id']),
-                                        row['org_name'],
-                                        row['org_type'],
-                                        row['org_function'],
+                                        org_id=int(row['org_id']),
+                                        org_name=row['org_name'],
+                                        org_type=row['org_type'],
+                                        org_function=row['org_function'],
                                     )
                                     if success:
                                         success_count += 1
@@ -88,11 +88,11 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             elif table_type == "Stakeholder":
                                 for _, row in df.iterrows():
                                     success = sqlite_mgr.insert_stakeholder(
-                                        int(row['stakeholder_id']),
-                                        int(row['org_id']),
-                                        row['name'],
-                                        row['job_title'],
-                                        row['role'],
+                                        stakeholder_id=int(row['stakeholder_id']),
+                                        org_id=int(row['org_id']),
+                                        name=row['name'],
+                                        job_title=row['job_title'],
+                                        role=row['role'],
                                     )
                                     if success:
                                         success_count += 1
@@ -105,10 +105,10 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             elif table_type == "PainPoint":
                                 for _, row in df.iterrows():
                                     success = sqlite_mgr.insert_painpoint(
-                                        int(row.get('painpoint_id')),
-                                        row.get('description'),
-                                        row.get('severity'),
-                                        row.get('urgency'),
+                                        painpoint_id=int(row.get('painpoint_id')),
+                                        description=row.get('description'),
+                                        severity=row.get('severity'),
+                                        urgency=row.get('urgency'),
                                     )
                                     if success:
                                         success_count += 1
@@ -121,10 +121,10 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             elif table_type == "Commercial":
                                 for _, row in df.iterrows():
                                     success = sqlite_mgr.insert_commercial(
-                                        int(row['commercial_id']),
-                                        int(row['org_id']),
-                                        row['method'],
-                                        float(row['budget']),
+                                        commercial_id=int(row['commercial_id']),
+                                        org_id=int(row['org_id']),
+                                        method=row['method'],
+                                        budget=float(row['budget']),
                                     )
                                     if success:
                                         success_count += 1
@@ -137,9 +137,9 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                             elif table_type == "OrgRelationship":
                                 for _, row in df.iterrows():
                                     success = sqlite_mgr.insert_org_relationship(
-                                        int(row['from_org_id']),
-                                        int(row['to_org_id']),
-                                        row['relationship_type'],
+                                        from_org_id=int(row['from_org_id']),
+                                        to_org_id=int(row['to_org_id']),
+                                        relationship_type=row['relationship_type'],
                                     )
                                     if success:
                                         success_count += 1
@@ -158,8 +158,8 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                     org_id = int(row['org_id'])
                                     painpoint_id = int(row['painpoint_id'])
                                     success = sqlite_mgr.insert_painpoint_assignment(
-                                        org_id,
-                                        painpoint_id
+                                        org_id=org_id,
+                                        painpoint_id=painpoint_id
                                     )
                                     if success:
                                         success_count += 1
