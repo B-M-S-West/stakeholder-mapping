@@ -71,12 +71,22 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                             if table_type == "Organisation":
                                 for _, row in df.iterrows():
-                                    success = sqlite_mgr.insert_organisation(
-                                        org_id=int(row['org_id']),
-                                        org_name=row['org_name'],
-                                        org_type=row['org_type'],
-                                        org_function=row['org_function'],
-                                    )
+                                    org_id_int = int(row['org_id'])
+                                    if replace_existing:
+                                        success = sqlite_mgr.update_organisation(
+                                            org_id=org_id_int,
+                                            org_name=row['org_name'],
+                                            org_type=row['org_type'],
+                                            org_function=row['org_function'],
+                                        )
+                                    else:
+                                        success = sqlite_mgr.insert_organisation(
+                                            org_id=org_id_int,
+                                            org_name=row['org_name'],
+                                            org_type=row['org_type'],
+                                            org_function=row['org_function'],
+                                        )
+
                                     if success:
                                         success_count += 1
                                         if sync_to_kuzu:
@@ -87,13 +97,23 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                             elif table_type == "Stakeholder":
                                 for _, row in df.iterrows():
-                                    success = sqlite_mgr.insert_stakeholder(
-                                        stakeholder_id=int(row['stakeholder_id']),
-                                        org_id=int(row['org_id']),
-                                        name=row['name'],
-                                        job_title=row['job_title'],
+                                    stakeholder_id_int = int(row['stakeholder_id'])
+                                    if replace_existing:
+                                        success = sqlite_mgr.update_stakeholder(
+                                            stakeholder_id=stakeholder_id_int,
+                                            org_id=int(row['org_id']),
+                                            name=row['name'],
+                                            job_title=row['job_title'],
                                         role=row['role'],
                                     )
+                                    else:
+                                        success = sqlite_mgr.insert_stakeholder(
+                                            stakeholder_id=stakeholder_id_int,
+                                            org_id=int(row['org_id']),
+                                            name=row['name'],
+                                            job_title=row['job_title'],
+                                            role=row['role'],
+                                        )
                                     if success:
                                         success_count += 1
                                         if sync_to_kuzu:
@@ -104,11 +124,20 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                             elif table_type == "PainPoint":
                                 for _, row in df.iterrows():
-                                    success = sqlite_mgr.insert_painpoint(
-                                        painpoint_id=int(row.get('painpoint_id')),
-                                        description=row.get('description'),
-                                        severity=row.get('severity'),
-                                        urgency=row.get('urgency'),
+                                    painpoint_id_int = int(row.get('painpoint_id'))
+                                    if replace_existing:
+                                        success = sqlite_mgr.update_painpoint(
+                                            painpoint_id=painpoint_id_int,
+                                            description=row.get('description'),
+                                            severity=row.get('severity'),
+                                            urgency=row.get('urgency'),
+                                    )
+                                    else:
+                                        success = sqlite_mgr.insert_painpoint(
+                                            painpoint_id=painpoint_id_int,
+                                            description=row.get('description'),
+                                            severity=row.get('severity'),
+                                            urgency=row.get('urgency'),
                                     )
                                     if success:
                                         success_count += 1
@@ -120,11 +149,20 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
 
                             elif table_type == "Commercial":
                                 for _, row in df.iterrows():
-                                    success = sqlite_mgr.insert_commercial(
-                                        commercial_id=int(row['commercial_id']),
-                                        org_id=int(row['org_id']),
-                                        method=row['method'],
-                                        budget=float(row['budget']),
+                                    commercial_id_int = int(row.get('commercial_id'))
+                                    if replace_existing:
+                                        success = sqlite_mgr.update_commercial(
+                                            commercial_id=commercial_id_int,
+                                            org_id=int(row['org_id']),
+                                            method=row['method'],
+                                            budget=float(row['budget']),
+                                    )
+                                    else:
+                                        success = sqlite_mgr.insert_commercial(
+                                            commercial_id=commercial_id_int,
+                                            org_id=int(row['org_id']),
+                                            method=row['method'],
+                                            budget=float(row['budget']),
                                     )
                                     if success:
                                         success_count += 1
@@ -165,8 +203,8 @@ def render_import_export(sqlite_mgr: SQLiteManager, sync_mgr: SyncManager):
                                         success_count += 1
                                         if sync_to_kuzu:
                                             sync_mgr.sync_painpoint_assignments(
-                                                org_id,
-                                                painpoint_id
+                                                org_ids=[org_id],
+                                                painpoint_id=painpoint_id
                                             )
                                     else:
                                         error_count += 1

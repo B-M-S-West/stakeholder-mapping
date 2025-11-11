@@ -31,7 +31,7 @@ TABLES = {
 ORG_TYPES = ["department", "agency", "ndpb"]
 
 # Relationship types
-RELATIONSHIP_TYPES = ["oversight", "supplier", "consumer", "mission"]
+RELATIONSHIP_TYPES = ["oversight", "supplier", "consumer", "mission", "HAS_PAINPOINT"]
 
 # Severity/Urgency levels
 SEVERITY_LEVELS = ["Low", "Medium", "High"]
