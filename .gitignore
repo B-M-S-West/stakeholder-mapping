@@ -6,7 +6,7 @@ govmap.db
 govmap.kuzu
 govmap.kuzu.wal
 graph.html
-
+.streamlit/secrets.toml
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

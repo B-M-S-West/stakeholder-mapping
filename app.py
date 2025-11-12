@@ -6,6 +6,34 @@ from ui.crud_forms import render_crud_interface
 from ui.graph_viz import render_graph_explorer
 from ui.import_export import render_import_export
 
+# Basic security settings
+def check_password():
+    """Returns True if the user has entered the correct password."""
+
+    # Check if the password is in Streamlit secrets
+    if "TESTING_PASSWORD" not in st.secrets:
+        st.error("Password not configured. Please set TESTING_PASSWORD in Streamlit secrets.")
+        st.stop()
+
+    correct_password = st.secrets["TESTING_PASSWORD"]
+
+    # Check if the user is already authenticated
+    if st.session_state.get("password_correct"):
+        return True
+    
+    # If not, show password input
+    with st.form("password_form"):
+        password = st.text_input("Enter password", type="password")
+        submitted = st.form_submit_button("Login")
+        
+        if submitted:
+            if password == correct_password:
+                st.session_state["password_correct"] = True
+                st.rerun()
+            else:
+                st.error("❌ Incorrect password. Please try again.")
+    return False
+
 # Page configuration
 st.set_page_config(
     page_title="Stakeholder Map",
@@ -13,6 +41,9 @@ st.set_page_config(
     layout="wide",
     initial_sidebar_state="expanded"
 )
+# Check password
+if not check_password():
+    st.stop()
 
 # Custom CSS
 st.markdown("""
