@@ -2,18 +2,37 @@
 .git
 .gitignore
 
+# Dockerfiles
+Dockerfile
+.dockerignore
+
 # Python cache and virtual env
 __pycache__/
 .venv/
 *.pyc
+venv/
+env/
+*.pyo
 
 # Local data and databases (should not be *copied* into the image)
 govmap.db
 govmap.kuzu/
 *.db-wal
 *.db-shm
+*.wal
 
 # IDE / OS files
 .vscode/
 .idea/
+.DS_Store
+*.local
+
+# Streamlit secrets
+.streamlit/secrets.toml
+
+# Secrets
+.env
+
+# OS-Specific
+Thumbs.db
 .DS_Store
