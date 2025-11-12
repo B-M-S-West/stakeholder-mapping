@@ -12,6 +12,7 @@ dependencies = [
     "pandas>=2.3.2",
     "polars>=1.33.1",
     "pyarrow>=21.0.0",
+    "python-dotenv>=1.2.1",
     "pyvis>=0.3.2",
     "rich>=14.2.0",
     "streamlit>=1.50.0",

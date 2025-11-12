@@ -5,17 +5,19 @@ from database.sync_manager import SyncManager
 from ui.crud_forms import render_crud_interface
 from ui.graph_viz import render_graph_explorer
 from ui.import_export import render_import_export
+import os
+from dotenv import load_dotenv
+
+load_dotenv()
 
 # Basic security settings
 def check_password():
     """Returns True if the user has entered the correct password."""
-
-    # Check if the password is in Streamlit secrets
-    if "TESTING_PASSWORD" not in st.secrets:
-        st.error("Password not configured. Please set TESTING_PASSWORD in Streamlit secrets.")
+    
+    correct_password = os.getenv("TESTING_PASSWORD")
+    if not correct_password:
+        st.error("❌ No password set in environment variables!")
         st.stop()
-
-    correct_password = st.secrets["TESTING_PASSWORD"]
 
     # Check if the user is already authenticated
     if st.session_state.get("password_correct"):
