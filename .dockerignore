@@ -20,6 +20,10 @@ govmap.kuzu/
 *.db-wal
 *.db-shm
 *.wal
+data/*.db
+data/*.kuzu
+data/exports/*
+logs/*
 
 # IDE / OS files
 .vscode/
