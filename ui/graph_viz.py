@@ -285,7 +285,7 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
 
         # Filter for organisations only
         org_nodes = [
-            node for node in filtered_nodes if validators.normalize_node_type(node.get("type")) == "organisation"
+            node for node in nodes if validators.normalize_node_type(node.get("type")) == "organisation"
         ]
 
         # Create a searchable dropdown of all nodes
@@ -327,14 +327,14 @@ def render_graph_explorer(kuzu_mgr: KuzuManager, sqlite_mgr: SQLiteManager):
                 # Find connected nodes
                 connected_edges = [
                     e
-                    for e in filtered_edges
+                    for e in edges
                     if e["from"] == selected_node["id"]
                     or e["to"] == selected_node["id"]
                 ]
                 st.write(f"**Connections:** {len(connected_edges)}")
 
                 # Map nodes by id for quick lookup
-                nodes_by_id = {n["id"]: n for n in filtered_nodes}
+                nodes_by_id = {n["id"]: n for n in nodes}
 
                 # Collect connected node ids and categorize
                 connected_node_ids = set()
