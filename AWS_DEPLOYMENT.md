@@ -78,7 +78,20 @@ Run the following commands in your local terminal (replace `<aws_account_id>` an
     aws ecr get-login-password --region <region> | docker login --username AWS --password-stdin <aws_account_id>.dkr.ecr.<region>.amazonaws.com
     ```
 
-## Step 5: Run the Application
+## Step 5: Secure Password Setup (AWS SSM)
+
+Instead of hardcoding passwords, we will store the app password in AWS Systems Manager (SSM) Parameter Store.
+
+1. **Store the password** (Run this on your local machine):
+    ```bash
+    aws ssm put-parameter \
+    --name "/stakeholder-app/TESTING_PASSWORD" \
+    --value "YOUR_SECURE_PASSWORD_HERE" \
+    --type "SecureString" \
+    --region <region>
+    ```
+
+## Step 6: Run the Application
 
 We will run the container and mount a volume. This maps a folder on the EC2 server (`~/app_data`) to the folder inside the container where the app saves data (`/app/data`).
 
@@ -87,13 +100,18 @@ We will run the container and mount a volume. This maps a folder on the EC2 serv
     mkdir -p ~/app_data
     ```
 
-2.  Run the container:
+2. Fetch Password from SSM: Retrieve the password into a shell variable.
     ```bash
-    docker run -d \
+    PASSWORD=$(aws ssm get-parameter --name "/stakeholder-app/TESTING_PASSWORD" --with-decryption --query "Parameter.Value" --output text)
+    ```
+
+3.  Run the container:
+    ```bash
+    docker run -d --restart always \
       --name stakeholder-app \
       -p 8501:8501 \
       -v /home/ec2-user/app_data:/app/data \
-      -e TESTING_PASSWORD="YOUR_SECURE_PASSWORD" \
+      -e TESTING_PASSWORD="$PASSWORD" \
       <aws_account_id>.dkr.ecr.<region>[.amazonaws.com/stakeholder-mapping:latest]
     ```
 
@@ -107,5 +125,5 @@ We will run the container and mount a volume. This maps a folder on the EC2 serv
 Open your browser and navigate to:
 `http://<your-ec2-public-ip>:8501`
 
-## Securely store App password in SSM
+
 
