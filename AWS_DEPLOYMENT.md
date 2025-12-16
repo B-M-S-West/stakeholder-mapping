@@ -2,6 +2,11 @@
 
 This guide details how to deploy the Stakeholder Mapping application to AWS. Because this application uses embedded databases (SQLite and Kuzu) rather than a separate database server, this guide uses **Amazon EC2** with a Docker volume mount. This ensures your data persists between deployments and restarts.
 
+## Warning
+Following these instructions exactly does not create a fully secure launch of the application. This currently sends a password over http. Deploy behind Nginx or behind AWS Application Load Balance to use your own domain and HTTPS. This means you can update the networking rule as well to not go through 8501 and direct traffic through port 443 for example.
+
+You could also use a VPN to access it and remove the need to make it available over the public internet. Only users connected to your private network can see it.
+
 ## Prerequisites
 
 1.  **AWS Account** with permissions to manage EC2 and ECR.
@@ -120,10 +125,8 @@ We will run the container and mount a volume. This maps a folder on the EC2 serv
     * `-v ...`: Maps the local `~/app_data` folder to the container's `/app/data` folder (as defined in `config.py`). **This ensures your database persists even if you stop the container.**
     * `-e ...`: Sets the required password environment variable checked in `app.py`.
 
-## Step 6: Access the App
+## Step 6: Access the App (Over HTTP which is not secure)
 
 Open your browser and navigate to:
 `http://<your-ec2-public-ip>:8501`
-
-
 
